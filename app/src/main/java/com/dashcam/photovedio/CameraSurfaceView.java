@@ -371,7 +371,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             Toast.makeText(context, "请插入存储卡", Toast.LENGTH_SHORT).show();
             return;
         }
-   //     mCamera.autoFocus(this);
+        mCamera.autoFocus(this);
     }
 
     @Override

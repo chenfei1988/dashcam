@@ -26,20 +26,17 @@ import com.dashcam.location.GPSLocationListener;
 import com.dashcam.location.GPSLocationManager;
 import com.dashcam.location.GPSProviderStatus;
 import com.dashcam.photovedio.CameraSurfaceView;
+import com.dashcam.photovedio.CheckPermissionsUtil;
 import com.dashcam.udp.UDPClient;
-import com.fastaccess.permission.base.PermissionHelper;
-import com.fastaccess.permission.base.callback.OnPermissionCallback;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import butterknife.Bind;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 
-public class MainActivity extends AppCompatActivity implements OnPermissionCallback {
+public class MainActivity extends AppCompatActivity  {
     @Bind(R.id.imei)
     TextView imei;
     @Bind(R.id.text_gps)
@@ -56,17 +53,6 @@ public class MainActivity extends AppCompatActivity implements OnPermissionCallb
     TextView textview;
     @Bind(R.id.text_state)
     TextView textState;
-    //权限检测类
-    private PermissionHelper mPermissionHelper;
-    private final static String[] MULTI_PERMISSIONS = new String[]{
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.WAKE_LOCK,
-            Manifest.permission.CAMERA,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-             };
     private GPSLocationManager gpsLocationManager;
     private UDPClient client = null;
     public static Context context;
@@ -98,29 +84,22 @@ public class MainActivity extends AppCompatActivity implements OnPermissionCallb
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
-        Toast.makeText(this, "线程ID：" + Thread.currentThread().getId(), Toast.LENGTH_SHORT).show();
-        checkPermissions();
         initData();
         initViews();
         context = this;
-    }
 
-    private void checkPermissions() {
-        mPermissionHelper = PermissionHelper.getInstance(MainActivity.this);
-        mPermissionHelper.request(MULTI_PERMISSIONS);
     }
 
     private void initData() {
+        CheckPermissionsUtil checkPermissionsUtil = new CheckPermissionsUtil(this);
+        checkPermissionsUtil.requestAllPermission(this);
         gpsLocationManager = GPSLocationManager.getInstances(MainActivity.this);
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
     }
 
     private void initViews() {
         imei.setText("(设备唯一串口)IMEI:" + getid());
-        //  CheckPermissionsUtil checkPermissionsUtil = new CheckPermissionsUtil(this);
-        // checkPermissionsUtil.requestAllPermission(this);
         cameraSurfaceView = (CameraSurfaceView) findViewById(R.id.cameraSurfaceView);
-        cameraSurfaceView.setRunBack(true);
         findViewById(R.id.capture).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -133,19 +112,24 @@ public class MainActivity extends AppCompatActivity implements OnPermissionCallb
                 if (isChecked) {
                     cameraSurfaceView.startRecord();
                     //设置录制时长为10秒视频
-        /*            cameraSurfaceView.startRecord(10000, new MediaRecorder.OnInfoListener() {
-                        @Override
-                       public void onInfo(MediaRecorder mr, int what, int extra) {
-                           cameraSurfaceView.stopRecord();
-                            buttonView.setChecked(false);
-                        }
-                    });*/
-                } else
+//                    cameraSurfaceView.startRecord(10000, new MediaRecorder.OnInfoListener() {
+//                        @Override
+//                        public void onInfo(MediaRecorder mr, int what, int extra) {
+//                            cameraSurfaceView.stopRecord();
+//                            buttonView.setChecked(false);
+//                        }
+//                    });
+                }
+                else
                     cameraSurfaceView.stopRecord();
             }
         });
-
-
+        ((ToggleButton) findViewById(R.id.runBack)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                cameraSurfaceView.setRunBack(isChecked);
+            }
+        });
         ((ToggleButton) findViewById(R.id.switchCamera)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -165,18 +149,6 @@ public class MainActivity extends AppCompatActivity implements OnPermissionCallb
             }
         });
     }
-
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        mPermissionHelper.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        mPermissionHelper.onActivityForResult(requestCode);
-    }
-
     class MyListener implements GPSLocationListener {
 
         @Override
@@ -320,36 +292,6 @@ public class MainActivity extends AppCompatActivity implements OnPermissionCallb
         textState.setText("wifi已关闭");
     }
 
-    @Override
-    public void onPermissionGranted(@NonNull String[] permissionName) {
-
-    }
-
-    @Override
-    public void onPermissionDeclined(@NonNull String[] permissionName) {
-
-    }
-
-    @Override
-    public void onPermissionPreGranted(@NonNull String permissionsName) {
-
-    }
-
-    @Override
-    public void onPermissionNeedExplanation(@NonNull String permissionName) {
-
-    }
-
-    @Override
-    public void onPermissionReallyDeclined(@NonNull String permissionName) {
-
-    }
-
-    @Override
-    public void onNoPermissionNeeded() {
-
-    }
-
     private void setBrightnessMode() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (!Settings.System.canWrite(context)) {
@@ -363,13 +305,6 @@ public class MainActivity extends AppCompatActivity implements OnPermissionCallb
             }
         }
     }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        cameraSurfaceView.closeCamera();
-    }
-
     @Override
     protected void onDestroy() {
         super.onDestroy();

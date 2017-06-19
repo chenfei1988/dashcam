@@ -18,6 +18,9 @@ public class CheckPermissionsUtil {
     }
 
     private String[] needPermissions = {
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.WAKE_LOCK,
             Manifest.permission.CAMERA,
