@@ -9,13 +9,24 @@ import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.media.MediaRecorder;
+import android.os.Environment;
 import android.util.AttributeSet;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Toast;
 
+import com.dashcam.MainActivity;
+import com.dashcam.base.RefreshEvent;
+
+import org.greenrobot.eventbus.EventBus;
+
+import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import id.zelory.compressor.Compressor;
 
 import static android.hardware.Camera.Parameters.FOCUS_MODE_AUTO;
 
@@ -37,6 +48,8 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     private int mCameraId;
     protected int previewformat = ImageFormat.NV21;
     Context context;
+    Compressor mCompressor;
+    public static String COMPRESSOR_DIR = Environment.getExternalStorageDirectory() + File.separator  + "photo" + File.separator + "photomini" + File.separator;
 
     public CameraSurfaceView(Context context) {
         super(context);
@@ -56,6 +69,11 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     private void init(Context context) {
         this.context = context;
         cameraState = CameraState.START;
+        File mDirFile = new File(COMPRESSOR_DIR);
+        if (!mDirFile.exists()) {
+            mDirFile.mkdirs();
+        }
+        mCompressor = new Compressor.Builder(context).setQuality(90).setDestinationDirectoryPath(COMPRESSOR_DIR).build();
         if (cameraStateListener != null) {
             cameraStateListener.onCameraStateChange(cameraState);
         }
@@ -389,8 +407,10 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                             matrix.setRotate(270);
                             matrix.postScale(-1, 1);
                         }
+
                         bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-                        FileUtil.saveBitmap(bitmap);
+                        String photopath =  FileUtil.saveBitmap(bitmap);
+                        EventBus.getDefault().post(new RefreshEvent(compressor(photopath),""));
                         Toast.makeText(context, "拍照成功", Toast.LENGTH_SHORT).show();
                         startPreview();
                     }
@@ -475,5 +495,10 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     /**_________________________________________________________________________________________**/
 
-
+    private static String getTime() {
+        return new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date(System.currentTimeMillis()));
+    }
+    private String compressor(String path) {
+        return mCompressor.compressToFile(new File(path)).getAbsolutePath();
+    }
 }

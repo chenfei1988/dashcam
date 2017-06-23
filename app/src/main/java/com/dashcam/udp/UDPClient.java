@@ -20,13 +20,12 @@ import java.net.UnknownHostException;
  * Created by lenovo on 2016/2/23.
  */
 public class UDPClient implements Runnable {
-    final static int udpPort = 9999;
-    final static String hostIp = "192.168.14.68";
+    final static int udpPort = 3001;
+    final static String hostIp = "139.129.193.52";
     private static DatagramSocket socket = null;
     private static DatagramPacket packetSend,packetRcv;
     private boolean udpLife = true; //udp生命线程
     private byte[] msgRcv = new byte[1024]; //接收消息
-
     public UDPClient(){
         super();
     }

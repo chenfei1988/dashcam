@@ -13,6 +13,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.telephony.TelephonyManager;
 import android.view.View;
@@ -22,21 +23,40 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import com.dashcam.base.ApiInterface;
+import com.dashcam.base.RefreshEvent;
 import com.dashcam.location.GPSLocationListener;
 import com.dashcam.location.GPSLocationManager;
 import com.dashcam.location.GPSProviderStatus;
 import com.dashcam.photovedio.CameraSurfaceView;
 import com.dashcam.photovedio.CheckPermissionsUtil;
 import com.dashcam.udp.UDPClient;
+import com.lzy.okhttputils.OkHttpUtils;
+import com.lzy.okhttputils.callback.StringCallback;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
+import org.json.JSONObject;
+
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 import butterknife.Bind;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
+import okhttp3.Call;
+import okhttp3.Request;
+import okhttp3.Response;
 
-public class MainActivity extends AppCompatActivity  {
+public class MainActivity extends AppCompatActivity {
     @Bind(R.id.imei)
     TextView imei;
     @Bind(R.id.text_gps)
@@ -61,9 +81,13 @@ public class MainActivity extends AppCompatActivity  {
     private CameraSurfaceView cameraSurfaceView;
     private WifiManager wifiManager;
     /**
+     * 时间计时器
+     */
+    private Timer timer = null;
+    /**
      * 热点名称
      */
-    private static final String WIFI_HOTSPOT_SSID = "TEST";
+    private static final String WIFI_HOTSPOT_SSID = "mywifi";
 
     private class MyHandler extends Handler {
 
@@ -71,6 +95,11 @@ public class MainActivity extends AppCompatActivity  {
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
             switch (msg.what) {
+                case 1:
+
+                    udpSendStrBuf.append(msg.obj.toString());
+                    txtSend.setText(udpSendStrBuf.toString());
+                    break;
                 case 2:
                     udpSendStrBuf.append(msg.obj.toString());
                     txtSend.setText(udpSendStrBuf.toString());
@@ -84,6 +113,7 @@ public class MainActivity extends AppCompatActivity  {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
+        EventBus.getDefault().register(this);
         initData();
         initViews();
         context = this;
@@ -98,7 +128,7 @@ public class MainActivity extends AppCompatActivity  {
     }
 
     private void initViews() {
-        imei.setText("(设备唯一串口)IMEI:" + getid());
+        imei.setText(getid());
         cameraSurfaceView = (CameraSurfaceView) findViewById(R.id.cameraSurfaceView);
         findViewById(R.id.capture).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -106,6 +136,16 @@ public class MainActivity extends AppCompatActivity  {
                 cameraSurfaceView.capture();
             }
         });
+        gpsLocationManager.start(new MyListener());
+        ExecutorService exec = Executors.newCachedThreadPool();
+        client = new UDPClient();
+        exec.execute(client);
+        btnUdpClose.setEnabled(true);
+        btnSenddata.setEnabled(true);
+        if (timer == null) {
+            timer = new Timer();
+            timer.schedule(task, 3000, 30000);
+        }
         ((ToggleButton) findViewById(R.id.record)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(final CompoundButton buttonView, boolean isChecked) {
@@ -119,8 +159,7 @@ public class MainActivity extends AppCompatActivity  {
 //                            buttonView.setChecked(false);
 //                        }
 //                    });
-                }
-                else
+                } else
                     cameraSurfaceView.stopRecord();
             }
         });
@@ -149,12 +188,13 @@ public class MainActivity extends AppCompatActivity  {
             }
         });
     }
+
     class MyListener implements GPSLocationListener {
 
         @Override
         public void UpdateLocation(Location location) {
             if (location != null) {
-                textGps.setText("经度：" + location.getLongitude() + "\n纬度：" + location.getLatitude());
+                textGps.setText(location.getLongitude() + "," + location.getLatitude());
             }
         }
 
@@ -198,14 +238,14 @@ public class MainActivity extends AppCompatActivity  {
     public void onClick(View view) {
         switch (view.getId()) {
             case R.id.btn_gps:
-                gpsLocationManager.start(new MyListener());
+                //   gpsLocationManager.start(new MyListener());
                 break;
             case R.id.btn_udpConn:
-                ExecutorService exec = Executors.newCachedThreadPool();
+             /*   ExecutorService exec = Executors.newCachedThreadPool();
                 client = new UDPClient();
                 exec.execute(client);
                 btnUdpClose.setEnabled(true);
-                btnSenddata.setEnabled(true);
+                btnSenddata.setEnabled(true);*/
                 break;
             case R.id.btn_udpClose:
                 client.setUdpLife(false);
@@ -214,20 +254,21 @@ public class MainActivity extends AppCompatActivity  {
                 btnSenddata.setEnabled(false);
                 break;
             case R.id.senddata:
-                Thread thread = new Thread(new Runnable() {
+              /*  Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
                         Message message = new Message();
                         message.what = 2;
                         if (textGps.getText().toString() != "") {
-                            client.send(textGps.getText().toString() + imei.getText().toString());
-                            message.obj = textGps.getText().toString() + imei.getText().toString();
+                            String sendtext="*"+imei.getText().toString().trim()+"1,"
+                                    +textGps.getText().toString().trim()+",0,0#";
+                            client.send(sendtext);
+                            message.obj = sendtext;
                             myHandler.sendMessage(message);
                         }
-
                     }
                 });
-                thread.start();
+                thread.start();*/
                 break;
         }
     }
@@ -305,10 +346,80 @@ public class MainActivity extends AppCompatActivity  {
             }
         }
     }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
         cameraSurfaceView.closeCamera();
+        EventBus.getDefault().unregister(this);
     }
+
+    TimerTask task = new TimerTask() {
+        @Override
+        public void run() {
+            Message message = new Message();
+            message.what = 2;
+            if (textGps.getText().toString() != "") {
+                String sendtext = "*" + imei.getText().toString().trim() + ",1,"
+                        + textGps.getText().toString().trim() + ",0,0#";
+                client.send(sendtext);
+                message.obj = sendtext;
+                myHandler.sendMessage(message);
+            }
+        }
+    };
+
+    public  void savePicture( String path) {
+        List<File> mList = new ArrayList<>();
+        mList.add(new File(path));
+        OkHttpUtils.post(ApiInterface.savePicture)     // 请求方式和请求url
+                .tag(this)
+                // 请求的 tag, 主要用于取消对应的请求
+                .addFileParams("xczp", mList)
+                .execute(new StringCallback() {
+                             @Override
+                             public void onResponse(boolean isFromCache, String s, Request
+                                     request, @Nullable Response response) {
+                                 try {
+                                     JSONObject mJsonObject = new JSONObject(s);
+                                     if (mJsonObject.getBoolean("success")) {
+                                         String backurl = mJsonObject.getString("msg");
+                                          backurl = backurl.substring(0, backurl.length() - 1);
+                                          backurl = "*" + imei.getText().toString().trim() + ",2," + backurl + "#";
+                                          final String url = backurl;
+                                          new Thread(
+                                                 new Runnable() {
+                                                     @Override
+                                                     public void run() {
+                                                         Message message = Message.obtain();
+                                                         message.what = 1;
+                                                         client.send(url);
+                                                         message.obj = url;
+                                                         myHandler.sendMessage(message);
+                                                     }
+                                                 }
+                                         ).start();
+
+                                     }
+                                 } catch (Exception e) {
+                                     e.printStackTrace();
+                                 }
+                             }
+
+                             @Override
+                             public void onError(boolean isFromCache, Call call, @Nullable Response
+                                     response, @Nullable Exception e) {
+                                 super.onError(isFromCache, call, response, e);
+
+                             }
+                         }
+                );
+
+    }
+    @Subscribe(threadMode = ThreadMode.BACKGROUND)
+    public void onEvnet(RefreshEvent refresh) {
+        savePicture(refresh.getPhotopath());
+    }
+
 }
 

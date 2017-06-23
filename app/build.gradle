@@ -11,6 +11,14 @@ android {
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
+    signingConfigs {
+        config {
+            keyAlias 'xinyiyun'
+            keyPassword 'chenfei'
+            storeFile file("keystore/xinyiyunappkey.jks")
+            storePassword 'chenfei'
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
@@ -28,4 +36,9 @@ dependencies {
     testCompile 'junit:junit:4.12'
     //注解框架
     compile 'com.jakewharton:butterknife:7.0.1'
+    compile 'com.lzy.net:okhttputils:1.7.2'
+    //可以单独使用，不需要依赖下方的扩展包
+    compile 'com.lzy.net:okhttpserver:1.0.1'
+    compile 'org.greenrobot:eventbus:3.0.0'
+    compile 'id.zelory:compressor:1.0.4'//图片压缩工具
 }
