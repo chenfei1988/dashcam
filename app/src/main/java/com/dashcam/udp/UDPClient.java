@@ -20,8 +20,10 @@ import java.net.UnknownHostException;
  * Created by lenovo on 2016/2/23.
  */
 public class UDPClient implements Runnable {
-    final static int udpPort = 3001;
+    //final static int udpPort = 3001;
+    final static int udpPort = 9999;
     final static String hostIp = "139.129.193.52";
+   // final static String hostIp = "192.168.10.15";
     private static DatagramSocket socket = null;
     private static DatagramPacket packetSend,packetRcv;
     private boolean udpLife = true; //udp生命线程
@@ -46,6 +48,7 @@ public class UDPClient implements Runnable {
 
     //发送消息
     public String send(String msgSend) {
+
         InetAddress hostAddress = null;
 
         try {
@@ -105,7 +108,7 @@ public class UDPClient implements Runnable {
                 Intent RcvIntent = new Intent();
                 RcvIntent.setAction("udpRcvMsg");
                 RcvIntent.putExtra("udpRcvMsg", RcvMsg);
-             //   MainActivity.context.sendBroadcast(RcvIntent);
+                MainActivity.context.sendBroadcast(RcvIntent);
 
                 Log.i("Rcv",RcvMsg);
             }catch (IOException e){

@@ -1,16 +1,23 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 26
-    buildToolsVersion "26.0.0"
+    compileSdkVersion 24
+    buildToolsVersion "24.0.2"
     defaultConfig {
         applicationId "com.dashcam"
-        minSdkVersion 15
-        targetSdkVersion 26
+        minSdkVersion 21
+        targetSdkVersion 24
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+      //  jackOptions{
+     //       enabled true
+     //   }
     }
+/*    compileOptions{
+        sourceCompatibility org.gradle.api.JavaVersion.VERSION_1_8
+        targetCompatibility org.gradle.api.JavaVersion.VERSION_1_8
+    }*/
     signingConfigs {
         config {
             keyAlias 'xinyiyun'
@@ -24,15 +31,20 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+        debug {
+            debuggable true
+            minifyEnabled false //这是关键的，我的问题就是出在这里
+            proguardFiles getDefaultProguardFile('proguard-android.txt')
+        }
     }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
-    compile 'com.android.support:appcompat-v7:26.0.0-alpha1'
+    compile 'com.android.support:appcompat-v7:24.2.1'
     testCompile 'junit:junit:4.12'
     //注解框架
     compile 'com.jakewharton:butterknife:7.0.1'
@@ -40,5 +52,7 @@ dependencies {
     //可以单独使用，不需要依赖下方的扩展包
     compile 'com.lzy.net:okhttpserver:1.0.1'
     compile 'org.greenrobot:eventbus:3.0.0'
-    compile 'id.zelory:compressor:1.0.4'//图片压缩工具
+    compile 'id.zelory:compressor:1.0.4'
+    //图片压缩工具
+    compile files('libs/nanohttpd-webserver-2.1.1-jar-with-dependencies.jar')
 }

@@ -38,6 +38,7 @@ public class MyAPP extends Application {
         sInstance = this;
         //必须调用初始化
         OkHttpUtils.init(this);
+        CrashHandler.getInstance().init(this);
         //以下都不是必须的，根据需要自行选择
         OkHttpUtils.getInstance()//
                 .debug("OkHttpUtils")                                              //是否打开调试

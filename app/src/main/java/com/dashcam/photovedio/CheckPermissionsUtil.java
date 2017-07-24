@@ -25,6 +25,9 @@ public class CheckPermissionsUtil {
             Manifest.permission.WAKE_LOCK,
             Manifest.permission.CAMERA,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_SMS,
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.RECEIVE_SMS,
             Manifest.permission.WRITE_SETTINGS
     };
 

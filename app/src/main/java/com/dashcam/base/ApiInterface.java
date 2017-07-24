@@ -15,4 +15,9 @@ public class ApiInterface {
      */
     public static final String savePicture = MAIN_URL + "appUpLoadPic/savePicture?";
 
+    /**
+     * 上传图片
+     */
+    public static final String saveFile = MAIN_URL + "appUpLoadPic/saveFile?";
+
 }
