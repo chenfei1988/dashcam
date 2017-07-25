@@ -8,6 +8,7 @@ import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
 import android.location.Location;
 import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
@@ -30,7 +31,9 @@ import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
+
 import com.dashcam.base.ApiInterface;
+import com.dashcam.base.DateUtils;
 import com.dashcam.base.MacUtils;
 import com.dashcam.base.RefreshEvent;
 import com.dashcam.base.SPUtils;
@@ -46,10 +49,12 @@ import com.dashcam.photovedio.FileUtil;
 import com.dashcam.udp.UDPClient;
 import com.lzy.okhttputils.OkHttpUtils;
 import com.lzy.okhttputils.callback.StringCallback;
+
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 import org.json.JSONObject;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -101,8 +106,8 @@ public class MainActivity extends AppCompatActivity {
      * 时间计时器
      */
     private Timer timer1 = null;//上传定位坐标定时器
- //   private Timer timer2 = null;//录制视频定时器
-  //  private Timer timer3 = null;//清除TP卡内容定时器
+    //   private Timer timer2 = null;//录制视频定时器
+    //  private Timer timer3 = null;//清除TP卡内容定时器
     /**
      * 热点名称
      */
@@ -115,9 +120,11 @@ public class MainActivity extends AppCompatActivity {
     private int curVolume = 20; // 当前音量值
     private int stepVolume = 0; // 每次调整的音量幅度
     private int Carmertype = 1;//前后摄像头，1为前置摄像头，2为后置摄像头
-  //  private int OpenRecord = 0;//0,开启录像 1,停止录像
-    private boolean IsExit=false;
-   // private Timer recordtimer;
+    //  private int OpenRecord = 0;//0,开启录像 1,停止录像
+    private boolean IsExit = false;
+    MediaPlayer mediaPlayer;
+
+    // private Timer recordtimer;
     private class MyHandler extends Handler {
 
         @Override
@@ -239,9 +246,15 @@ public class MainActivity extends AppCompatActivity {
             public void onCheckedChanged(final CompoundButton buttonView, boolean isChecked) {
 
                 if (isChecked) {
-                  //  cameraSurfaceView.startRecord();
+                    //  cameraSurfaceView.startRecord();
                     IsExit = false;
-                    StartRecord();
+                    if (DateUtils.IsDay()) {
+                        PlayMusic(MainActivity.this, 0);
+                    } else {
+                        PlayMusic(MainActivity.this, 1);
+                    }
+
+                  //  StartRecord();
                     //设置录制时长为10秒视频
 //                    cameraSurfaceView.startRecord(10000, new MediaRecorder.OnInfoListener() {
 //                        @Override
@@ -250,11 +263,10 @@ public class MainActivity extends AppCompatActivity {
 //                            buttonView.setChecked(false);
 //                        }
 //                    });
-                }
-                else
-                   // StopRecord();
+                } else
+                    // StopRecord();
                     IsExit = true;
-                    cameraSurfaceView.stopRecord();
+                cameraSurfaceView.stopRecord();
               /*  if (isChecked) {
                     if (timer2 == null) {
                         timer2 = new Timer();
@@ -535,6 +547,11 @@ public class MainActivity extends AppCompatActivity {
         IsExit = true;
         unregisterReceiver(smsReceiver);
         EventBus.getDefault().unregister(this);
+        if (mediaPlayer != null && mediaPlayer.isPlaying()) {
+            mediaPlayer.stop();
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
     }
 
     @Override
@@ -560,29 +577,32 @@ public class MainActivity extends AppCompatActivity {
             // }
         }
     };
-  /*  class recordtask extends TimerTask {
-        @Override
-        public void run() {
-            if (!IsRecording && OpenRecord == 0) {
-                cameraSurfaceView.startRecord();
-                IsRecording = true;
-            } else {
-                cameraSurfaceView.stopRecord();
-                if (OpenRecord == 0) {
-                    cameraSurfaceView.startRecord();
-                }
-            }
-         /*   Message message = new Message();
-            message.what = 4;
-            myHandler.sendMessage(message);
-        }
-    };*/
-    class  clearTFCardethread extends Thread {
+
+    /*  class recordtask extends TimerTask {
+          @Override
+          public void run() {
+              if (!IsRecording && OpenRecord == 0) {
+                  cameraSurfaceView.startRecord();
+                  IsRecording = true;
+              } else {
+                  cameraSurfaceView.stopRecord();
+                  if (OpenRecord == 0) {
+                      cameraSurfaceView.startRecord();
+                  }
+              }
+           /*   Message message = new Message();
+              message.what = 4;
+              myHandler.sendMessage(message);
+          }
+      };*/
+    class clearTFCardethread extends Thread {
         @Override
         public void run() {
             deleteOldestUnlockVideo();
         }
-    };
+    }
+
+    ;
 
     public void savePicture(String path) {
         List<File> mList = new ArrayList<>();
@@ -892,7 +912,12 @@ public class MainActivity extends AppCompatActivity {
                 case "90":// 开启录像
                     String recordopentext = "";
                     if (!cameraSurfaceView.isRecording) {
-                        StartRecord();
+                        if (DateUtils.IsDay()) {
+                            PlayMusic(MainActivity.this, 0);
+                        } else {
+                            PlayMusic(MainActivity.this, 1);
+                        }
+                       // StartRecord();
 
                    /* if (!cameraSurfaceView.isRecording) {
                         if (timer2 == null) {
@@ -911,12 +936,11 @@ public class MainActivity extends AppCompatActivity {
                         if (IsRecording) {
                             OpenRecord = 0;
                         }*/
-                        IsRecording = cameraSurfaceView.isRecording;
                         new Handler().postDelayed(new Runnable() {
                             public void run() {
                                 //execute the task
                                 final String opentext = "*" + imei.getText().toString().trim() + ",11," +
-                                        +(IsRecording == true ? 0 : 1) + "#";
+                                        +(cameraSurfaceView.isRecording == true ? 0 : 1) + "#";
 
                                 new Thread(new Runnable() {
                                     @Override
@@ -925,7 +949,7 @@ public class MainActivity extends AppCompatActivity {
                                     }
                                 }).start();
                             }
-                        }, 2000);
+                        }, 14000);
                         ;
                     } else {
                         recordopentext = "*" + imei.getText().toString().trim() + ",11," +
@@ -942,7 +966,7 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case "89":// 关闭录像
                     String recordclosetext = "";
-                  //  StopRecord();
+                    //  StopRecord();
                  /*   if (timer2 != null) {
                         timer2.cancel();
                         timer2 = null;
@@ -970,13 +994,13 @@ public class MainActivity extends AppCompatActivity {
                 case "88":// 关闭录像提取录像列表平台发送  *终端编号,88,开始时间,结束时间#
                     String filenamestext = "";
                     if (types.length == 4) {
-                        String time1= types[2];
+                        String time1 = types[2];
                         String time2 = types[3];
-                        filenamestext = FileUtil.GetTimeFiles(DEFAULT_FILE_PATH,time1,time2);
+                        filenamestext = FileUtil.GetTimeFiles(DEFAULT_FILE_PATH, time1, time2);
                     }
                     filenamestext = "*" + imei.getText().toString().trim() + ",13," +
                             filenamestext + "#";
-                    final String  sendfilenamestext = filenamestext;
+                    final String sendfilenamestext = filenamestext;
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
@@ -986,8 +1010,8 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case "87"://提取录像平台发送  *终端编号,87,文件名#
                     if (types.length == 3) {
-                        String filename= types[2];
-                        saveFile(DEFAULT_FILE_PATH+filename);
+                        String filename = types[2];
+                        saveFile(DEFAULT_FILE_PATH + filename);
 
                     }
                     break;
@@ -997,24 +1021,25 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-   private void StartRecord(){
-       if (!cameraSurfaceView.isRecording) {
-           try {
-               cameraSurfaceView.startRecord();
-               myHandler.postDelayed(new Runnable() {
-                   @Override
-                   public void run() {
-                       myHandler.sendEmptyMessage(9);
-                   }
-               },3*60*1000);
+    private void StartRecord() {
+        if (!cameraSurfaceView.isRecording) {
+            try {
+                cameraSurfaceView.startRecord();
+                myHandler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        myHandler.sendEmptyMessage(9);
+                    }
+                }, 3 * 60 * 1000);
 
-             } catch (IllegalStateException e) {
-               // TODO Auto-generated catch block
-               e.printStackTrace();
-           }
-       }
+            } catch (IllegalStateException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
 
-   }
+    }
+
     public void saveFile(String path) {
         List<File> mList = new ArrayList<>();
         mList.add(new File(path));
@@ -1062,5 +1087,44 @@ public class MainActivity extends AppCompatActivity {
                 );
 
     }
+
+    public void PlayMusic(Context mcontext, int type) {  //0 day 1 night
+    /*    mediaPlayer = new MediaPlayer();
+       switch (type) {
+            case 0:
+                mediaPlayer=MediaPlayer.create(mcontext, R.raw.day);
+                break;
+            case 1:
+                mediaPlayer=MediaPlayer.create(mcontext, R.raw.night);
+                break;
+            default:
+                mediaPlayer=MediaPlayer.create(mcontext, R.raw.day);
+                break;
+
+        }
+        mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        if(mediaPlayer !=null){
+            mediaPlayer.stop();
+        }
+        // 通过异步的方式装载媒体资源
+        mediaPlayer.prepareAsync();
+        mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            @Override
+            public void onPrepared(MediaPlayer mp) {
+                // 装载完毕回调
+                mediaPlayer.start();
+            }
+
+        });
+        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                // 在播放完毕被回调
+                StartRecord();
+            }
+        });*/
+        StartRecord();
+    }
+
 }
 

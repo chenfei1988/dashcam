@@ -473,7 +473,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             mediaRecorder.setMaxDuration(maxDurationMs);
             mediaRecorder.setOnInfoListener(onInfoListener);
         }
-         driveVideo = FileUtil.getMediaOutputPath();
+         driveVideo = FileUtil.getMediaOutputPath(context);
          mediaRecorder.setOutputFile(driveVideo.getPath());
       // mediaRecorder.setOutputFile(FileUtil.getMediaOutputPath1());
         try {

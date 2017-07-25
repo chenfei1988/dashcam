@@ -389,4 +389,13 @@ public static long getGMTime1() {
             return WEEK[dayIndex - 1];
         }
 
+    public static  boolean  IsDay() {
+        Date d = new Date();
+        int hours = d.getHours();
+        if (hours>=7&&hours<=19){
+            return true;
+        }else{
+            return false;
+        }
+    }
 }

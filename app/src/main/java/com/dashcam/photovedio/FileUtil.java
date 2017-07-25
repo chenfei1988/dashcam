@@ -2,14 +2,19 @@ package com.dashcam.photovedio;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.media.MediaPlayer;
 import android.os.Environment;
 import android.os.StatFs;
+import android.os.storage.StorageManager;
 import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
+import android.util.Log;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import com.dashcam.MainActivity;
+import com.dashcam.R;
 import com.dashcam.base.RefreshEvent;
 
 import org.greenrobot.eventbus.EventBus;
@@ -20,6 +25,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.ConnectException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -28,9 +39,11 @@ import java.util.List;
 
 import id.zelory.compressor.Compressor;
 
-public class FileUtil {
-    private static final String rootPath = Environment.getExternalStorageDirectory().getAbsolutePath();
+import static android.content.Context.STORAGE_SERVICE;
 
+public class FileUtil {
+   // private static final String rootPath = Environment.getExternalStorageDirectory().getAbsolutePath();
+   private static final String rootPath= System.getenv("SECONDARY_STORAGE");;
     //保存照片
     public static String saveBitmap(Bitmap b) {
         String jpegName = rootPath + "/photo/" + getTime() + ".jpg";
@@ -58,8 +71,9 @@ public class FileUtil {
     }
 
     //获取视频存储路径
-    public static DriveVideo getMediaOutputPath() {
+    public static DriveVideo getMediaOutputPath(Context mcontext) {
         String name = getTime();
+        String rootPath = getStoragePath(mcontext,true);
         String vediopath = rootPath + "/vedio/" + name + ".mp4";
         File file = new File(rootPath + "/vedio");
         if (!file.exists()) {
@@ -276,4 +290,109 @@ public class FileUtil {
         }
        return  returnfilenames;
     }
+    /**
+     * 获取外置SD卡路径
+     * @return  应该就一条记录或空
+     */
+    // 获取次存储卡路径,一般就是外置 TF 卡了. 不过也有可能是 USB OTG 设备...
+    // 其实只要判断第二章卡在挂载状态,就可以用了.
+    /**
+     * 获取外置SD卡路径以及TF卡的路径
+     * <p>
+     * 返回的数据：paths.get(0)肯定是外置SD卡的位置，因为它是primary external storage.
+     *
+     * @return 所有可用于存储的不同的卡的位置，用一个List来保存
+     */
+    public static List<String> getExtSDCardPathList() {
+        List<String> paths = new ArrayList<String>();
+        String extFileStatus = Environment.getExternalStorageState();
+        File extFile = Environment.getExternalStorageDirectory();
+        //首先判断一下外置SD卡的状态，处于挂载状态才能获取的到
+        if (extFileStatus.equals(Environment.MEDIA_MOUNTED)
+                && extFile.exists() && extFile.isDirectory()
+                && extFile.canWrite()) {
+            //外置SD卡的路径
+            paths.add(extFile.getAbsolutePath());
+        }
+        try {
+            // obtain executed result of command line code of 'mount', to judge
+            // whether tfCard exists by the result
+            Runtime runtime = Runtime.getRuntime();
+            Process process = runtime.exec("mount");
+            InputStream is = process.getInputStream();
+            InputStreamReader isr = new InputStreamReader(is);
+            BufferedReader br = new BufferedReader(isr);
+            String line = null;
+            int mountPathIndex = 1;
+            while ((line = br.readLine()) != null) {
+                // format of sdcard file system: vfat/fuse
+                if ((!line.contains("fat") && !line.contains("fuse") && !line
+                        .contains("storage"))
+                        || line.contains("secure")
+                        || line.contains("asec")
+                        || line.contains("firmware")
+                        || line.contains("shell")
+                        || line.contains("obb")
+                        || line.contains("legacy") || line.contains("data")) {
+                    continue;
+                }
+                String[] parts = line.split(" ");
+                int length = parts.length;
+                if (mountPathIndex >= length) {
+                    continue;
+                }
+                String mountPath = parts[mountPathIndex];
+                if (!mountPath.contains("/") || mountPath.contains("data")
+                        || mountPath.contains("Data")) {
+                    continue;
+                }
+                File mountRoot = new File(mountPath);
+                if (!mountRoot.exists() || !mountRoot.isDirectory()
+                        || !mountRoot.canWrite()) {
+                    continue;
+                }
+                boolean equalsToPrimarySD = mountPath.equals(extFile
+                        .getAbsolutePath());
+                if (equalsToPrimarySD) {
+                    continue;
+                }
+                //扩展存储卡即TF卡或者SD卡路径
+                paths.add(mountPath);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return paths;
+    }
+    private static String getStoragePath(Context mContext, boolean is_removale) {
+
+        StorageManager mStorageManager = (StorageManager) mContext.getSystemService(Context.STORAGE_SERVICE);
+        Class<?> storageVolumeClazz = null;
+        try {
+            storageVolumeClazz = Class.forName("android.os.storage.StorageVolume");
+            Method getVolumeList = mStorageManager.getClass().getMethod("getVolumeList");
+            Method getPath = storageVolumeClazz.getMethod("getPath");
+            Method isRemovable = storageVolumeClazz.getMethod("isRemovable");
+            Object result = getVolumeList.invoke(mStorageManager);
+            final int length = Array.getLength(result);
+            for (int i = 0; i < length; i++) {
+                Object storageVolumeElement = Array.get(result, i);
+                String path = (String) getPath.invoke(storageVolumeElement);
+                boolean removable = (Boolean) isRemovable.invoke(storageVolumeElement);
+                if (is_removale == removable) {
+                    return path;
+                }
+            }
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
 }

@@ -28,7 +28,8 @@ public class CheckPermissionsUtil {
             Manifest.permission.READ_SMS,
             Manifest.permission.SEND_SMS,
             Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.WRITE_SETTINGS
+            Manifest.permission.WRITE_SETTINGS,
+            Manifest.permission.MOUNT_UNMOUNT_FILESYSTEMS
     };
 
     private boolean checkPermission(String... needPermissions) {
