@@ -24,7 +24,7 @@ public class BootBroadcastReceiver extends BroadcastReceiver {
                 public void run() {
                     mContext.startActivity(mainActivityIntent);
                 }
-            }, 10000);
+            }, 3000);
         }
     }
 }

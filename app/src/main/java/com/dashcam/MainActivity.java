@@ -4,6 +4,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraManager;
 import android.location.Location;
@@ -13,6 +17,7 @@ import android.net.Uri;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -61,6 +66,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -76,7 +82,7 @@ import okhttp3.Response;
 
 import static com.dashcam.photovedio.FileUtil.getConnectedIP;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
     @Bind(R.id.imei)
     TextView imei;
     @Bind(R.id.text_gps)
@@ -106,13 +112,12 @@ public class MainActivity extends AppCompatActivity {
      * 时间计时器
      */
     private Timer timer1 = null;//上传定位坐标定时器
-    //   private Timer timer2 = null;//录制视频定时器
-    //  private Timer timer3 = null;//清除TP卡内容定时器
+    //private Timer timer2 = null;//录制视频定时器
+    private Timer timer3 = null;//清除TP卡内容定时器
     /**
      * 热点名称
      */
     private static final String WIFI_HOTSPOT_SSID = "JIJJMA-";
-
     private DriveVideoDbHelper videoDb;
     private SmsReceiver smsReceiver;
     private AudioManager audioMgr = null; // Audio管理器，用了控制音量
@@ -120,9 +125,11 @@ public class MainActivity extends AppCompatActivity {
     private int curVolume = 20; // 当前音量值
     private int stepVolume = 0; // 每次调整的音量幅度
     private int Carmertype = 1;//前后摄像头，1为前置摄像头，2为后置摄像头
-    //  private int OpenRecord = 0;//0,开启录像 1,停止录像
-    private boolean IsExit = false;
+    private boolean IsStopRecord = false;
     MediaPlayer mediaPlayer;
+    private SensorManager mSensorManager;
+    private Sensor mSensor;
+
 
     // private Timer recordtimer;
     private class MyHandler extends Handler {
@@ -139,21 +146,21 @@ public class MainActivity extends AppCompatActivity {
                 case 2:
                     udpSendStrBuf.append("发送的信息：" + msg.obj.toString());
                     txtSend.setText(udpSendStrBuf.toString());
+                    Calendar mCalendar = Calendar.getInstance();
+                    long timestamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
+                     if (timestamp-lastaccelerometertimestamp>300&&IsCharge == false){
+
+                         IsStopRecord = true;
+                         cameraSurfaceView.stopRecord();
+                     }
+
                     break;
                 case 3:
                     udpSendStrBuf.append("接收到信息：" + msg.obj.toString());
                     txtSend.setText(udpSendStrBuf.toString());
                     break;
                 case 4:
-                  /*  if (!IsRecording && OpenRecord == 0) {
-                        cameraSurfaceView.startRecord();
-                        IsRecording = true;
-                    } else {
-                        cameraSurfaceView.stopRecord();
-                        if (OpenRecord == 0) {
-                            cameraSurfaceView.startRecord();
-                        }
-                    }*/
+
                     break;
                 case 5:
                     Toast.makeText(MainActivity.this, "存储已满，请手动删除", Toast.LENGTH_SHORT);
@@ -170,9 +177,17 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case 9:
                     cameraSurfaceView.stopRecord();
-                    new clearTFCardethread().start();
-                    if (!IsExit) {
+                 //   new clearTFCardethread().start();
+                    if (!IsStopRecord) {
                         StartRecord();
+                    }
+                    break;
+                case 10:
+                    IsStopRecord = false;
+                    if (DateUtils.IsDay()) {
+                        PlayMusic(MainActivity.this, 0);
+                    } else {
+                        PlayMusic(MainActivity.this, 1);
                     }
                     break;
             }
@@ -195,6 +210,7 @@ public class MainActivity extends AppCompatActivity {
         initData();
         initViews();
         context = this;
+        registerReceiver(mbatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         BindReceiver();
 
     }
@@ -212,6 +228,23 @@ public class MainActivity extends AppCompatActivity {
         curVolume = maxVolume / 2;
         // 每次调整的音量大概为最大音量的1/6
         stepVolume = maxVolume / 8;
+        Calendar mCalendar = Calendar.getInstance();
+        lastaccelerometertimestamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
+        mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
+        mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);// TYPE_GRAVITY
+        if (null == mSensorManager) {
+            Log.d("dfdfd", "deveice not support SensorManager");
+        }
+        // 参数三，检测的精准度
+        mSensorManager.registerListener(this, mSensor,
+                SensorManager.SENSOR_DELAY_NORMAL);// SENSOR_DELAY_GAME
+
+        myHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                myHandler.sendEmptyMessage(10);
+            }
+        }, 5000);
     }
 
     private void initViews() {
@@ -233,8 +266,14 @@ public class MainActivity extends AppCompatActivity {
             timer1 = new Timer();
             timer1.schedule(task, 3000, 30000);
             //  timer.schedule(recordtask, 5000, 1000 * 4 * 3);
-            //  timer.schedule(clearTFtask, 13000, 1000 * 60 * 5);
+           // timer1.schedule(new clearTFtask(), 3000, 1000 * 60 * 5);
+        }if (timer3 == null) {
+            timer3 = new Timer();
+           // timer3.schedule(task, 3000, 30000);
+            //  timer.schedule(recordtask, 5000, 1000 * 4 * 3);
+            timer3.schedule(clearTFtask, 3000, 1000 * 60 * 5);
         }
+
 
         smsReceiver = new SmsReceiver();
         IntentFilter filter = new IntentFilter("android.provider.Telephony.SMS_RECEIVED");
@@ -247,14 +286,9 @@ public class MainActivity extends AppCompatActivity {
 
                 if (isChecked) {
                     //  cameraSurfaceView.startRecord();
-                    IsExit = false;
-                    if (DateUtils.IsDay()) {
-                        PlayMusic(MainActivity.this, 0);
-                    } else {
-                        PlayMusic(MainActivity.this, 1);
-                    }
 
-                  //  StartRecord();
+
+                    //  StartRecord();
                     //设置录制时长为10秒视频
 //                    cameraSurfaceView.startRecord(10000, new MediaRecorder.OnInfoListener() {
 //                        @Override
@@ -265,7 +299,7 @@ public class MainActivity extends AppCompatActivity {
 //                    });
                 } else
                     // StopRecord();
-                    IsExit = true;
+                    IsStopRecord = true;
                 cameraSurfaceView.stopRecord();
               /*  if (isChecked) {
                     if (timer2 == null) {
@@ -325,7 +359,8 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void UpdateLocation(Location location) {
             if (location != null) {
-                textGps.setText(location.getLongitude() + "," + location.getLatitude());
+                textGps.setText(location.getLongitude() + "," + location.getLatitude()+","+location.getSpeed()+","+location.getBearing());
+
             }
         }
 
@@ -538,31 +573,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        cameraSurfaceView.closeCamera();
-        mVideoServer.stop();
-        task.cancel();
-        IsExit = true;
-        unregisterReceiver(smsReceiver);
-        EventBus.getDefault().unregister(this);
-        if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-            mediaPlayer.stop();
-            mediaPlayer.release();
-            mediaPlayer = null;
-        }
-    }
-
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            moveTaskToBack(false);
-            return true;
-        }
-        return super.onKeyDown(keyCode, event);
-    }
-
     TimerTask task = new TimerTask() {
         @Override
         public void run() {
@@ -570,7 +580,7 @@ public class MainActivity extends AppCompatActivity {
             message.what = 2;
             //  if (textGps.getText().toString() != "") {
             String sendtext = "*" + imei.getText().toString().trim() + ",1,"
-                    + textGps.getText().toString().trim() + ",0,0#";
+                    + textGps.getText().toString().trim() + "#";
             client.send(sendtext);
             message.obj = sendtext;
             myHandler.sendMessage(message);
@@ -595,14 +605,19 @@ public class MainActivity extends AppCompatActivity {
               myHandler.sendMessage(message);
           }
       };*/
-    class clearTFCardethread extends Thread {
+   /* class clearTFCardethread extends Thread {
         @Override
         public void run() {
             deleteOldestUnlockVideo();
         }
-    }
+    }*/
 
-    ;
+    TimerTask clearTFtask = new TimerTask() {
+        @Override
+        public void run() {
+            deleteOldestUnlockVideo();
+        }
+    };
 
     public void savePicture(String path) {
         List<File> mList = new ArrayList<>();
@@ -820,7 +835,6 @@ public class MainActivity extends AppCompatActivity {
                         resultList.append(ip);
                         resultList.append("@");
                     }
-
                     final String sendtext = "*" + imei.getText().toString().trim() + ",3,"
                             + resultList.substring(0, resultList.length() - 1) + "#";
                     new Thread(new Runnable() {
@@ -917,7 +931,7 @@ public class MainActivity extends AppCompatActivity {
                         } else {
                             PlayMusic(MainActivity.this, 1);
                         }
-                       // StartRecord();
+                        // StartRecord();
 
                    /* if (!cameraSurfaceView.isRecording) {
                         if (timer2 == null) {
@@ -966,20 +980,7 @@ public class MainActivity extends AppCompatActivity {
                     break;
                 case "89":// 关闭录像
                     String recordclosetext = "";
-                    //  StopRecord();
-                 /*   if (timer2 != null) {
-                        timer2.cancel();
-                        timer2 = null;
-                    }
-                    if (timer3 != null) {
-                        timer3.cancel();
-                        timer3 = null;
-                    }
-                    cameraSurfaceView.stopRecord();
-                    if (!cameraSurfaceView.isRecording) {
-                        OpenRecord = 1;
-                    }*/
-                    IsExit = true;
+                    IsStopRecord = true;
                     cameraSurfaceView.stopRecord();
                     recordclosetext = "*" + imei.getText().toString().trim() + ",12," +
                             +(cameraSurfaceView.isRecording == true ? 1 : 0) + "#";
@@ -1089,21 +1090,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void PlayMusic(Context mcontext, int type) {  //0 day 1 night
-    /*    mediaPlayer = new MediaPlayer();
-       switch (type) {
+        mediaPlayer = new MediaPlayer();
+        switch (type) {
             case 0:
-                mediaPlayer=MediaPlayer.create(mcontext, R.raw.day);
+                mediaPlayer = MediaPlayer.create(mcontext, R.raw.day);
                 break;
             case 1:
-                mediaPlayer=MediaPlayer.create(mcontext, R.raw.night);
+                mediaPlayer = MediaPlayer.create(mcontext, R.raw.night);
                 break;
             default:
-                mediaPlayer=MediaPlayer.create(mcontext, R.raw.day);
+                mediaPlayer = MediaPlayer.create(mcontext, R.raw.day);
                 break;
 
         }
         mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        if(mediaPlayer !=null){
+        if (mediaPlayer != null) {
             mediaPlayer.stop();
         }
         // 通过异步的方式装载媒体资源
@@ -1122,9 +1123,96 @@ public class MainActivity extends AppCompatActivity {
                 // 在播放完毕被回调
                 StartRecord();
             }
-        });*/
-        StartRecord();
+        });
+        //    StartRecord();
     }
 
+
+    private boolean IsCharge = false;
+    /*
+    充电状态获取
+     */
+    private BroadcastReceiver mbatteryReceiver = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (Intent.ACTION_BATTERY_CHANGED.equals(action)) {
+                int status = intent.getIntExtra("status", BatteryManager.BATTERY_STATUS_UNKNOWN);
+                if (status == BatteryManager.BATTERY_STATUS_CHARGING) {
+                    IsCharge = true;
+                }
+            } else {
+                IsCharge = false;
+            }
+        }
+    };
+    private int mX, mY, mZ;
+    private long lastaccelerometertimestamp = 0; //上次加速度不为0的时间
+    private int maxvalue;
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor == null) {
+            return;
+        }
+
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            int x = (int) event.values[0];
+            int y = (int) event.values[1];
+            int z = (int) event.values[2];
+            Calendar mCalendar = Calendar.getInstance();
+            long stamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
+            int px = Math.abs(mX - x);
+            int py = Math.abs(mY - y);
+            int pz = Math.abs(mZ - z);
+            maxvalue = FileUtil.getMaxValue(px, py, pz);
+            if (maxvalue > 2) {
+                lastaccelerometertimestamp = stamp;
+            } else {
+
+            }
+            mX = x;
+            mY = y;
+            mZ = z;
+        }
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        cameraSurfaceView.closeCamera();
+        mVideoServer.stop();
+        task.cancel();
+        clearTFtask.cancel();
+        if (timer1 != null) {
+            timer1.cancel();
+            timer1 = null;
+        }
+        if (timer3 != null) {
+            timer3.cancel();
+            timer3 = null;
+        }
+        IsStopRecord = true;
+        unregisterReceiver(smsReceiver);
+        unregisterReceiver(mbatteryReceiver);
+        EventBus.getDefault().unregister(this);
+        if (mediaPlayer != null && mediaPlayer.isPlaying()) {
+            mediaPlayer.stop();
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
+    }
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+      /*  if (keyCode == KeyEvent.KEYCODE_BACK) {
+            moveTaskToBack(false);
+            return true;
+        }*/
+        return super.onKeyDown(keyCode, event);
+    }
 }
 

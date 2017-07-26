@@ -42,8 +42,8 @@ import id.zelory.compressor.Compressor;
 import static android.content.Context.STORAGE_SERVICE;
 
 public class FileUtil {
-   // private static final String rootPath = Environment.getExternalStorageDirectory().getAbsolutePath();
-   private static final String rootPath= System.getenv("SECONDARY_STORAGE");;
+    private static final String rootPath = Environment.getExternalStorageDirectory().getAbsolutePath();
+  // private static final String rootPath= System.getenv("SECONDARY_STORAGE");;
     //保存照片
     public static String saveBitmap(Bitmap b) {
         String jpegName = rootPath + "/photo/" + getTime() + ".jpg";
@@ -73,7 +73,7 @@ public class FileUtil {
     //获取视频存储路径
     public static DriveVideo getMediaOutputPath(Context mcontext) {
         String name = getTime();
-        String rootPath = getStoragePath(mcontext,true);
+       // String rootPath = getStoragePath(mcontext,true);
         String vediopath = rootPath + "/vedio/" + name + ".mp4";
         File file = new File(rootPath + "/vedio");
         if (!file.exists()) {
@@ -245,7 +245,7 @@ public class FileUtil {
      */
     public static boolean judgeTime3Time(String name, String time1, String time2) {
 
-        SimpleDateFormat sdf1 = new SimpleDateFormat(" yyyyMMdd-HH:mm:ss");
+        SimpleDateFormat sdf1 = new SimpleDateFormat("yyyyMMdd-HH:mm:ss");
         SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         try {
             //转化为时间
@@ -263,8 +263,8 @@ public class FileUtil {
             }
         } catch (ParseException e) {
             e.printStackTrace();
+            return false;
         }
-        return false;
     }
 
     public static String GetTimeFiles(String mVideoFilePath,String time1,String time2) {
@@ -278,7 +278,7 @@ public class FileUtil {
         final File[] files = file.listFiles();
         for (File spec : files)
         {
-            if (judgeTime3Time(spec.getName(),time1,time2)){
+            if (judgeTime3Time(spec.getName().replace(".mp4",""),time1,time2)){
                 builder.append(spec.getName());
                 builder.append(";");
             }
@@ -394,5 +394,24 @@ public class FileUtil {
         }
         return null;
     }
+    /**
+     * 获取一个最大值
+     *
+     * @param px
+     * @param py
+     * @param pz
+     * @return
+     */
+    public static int getMaxValue(int px, int py, int pz) {
+        int max = 0;
+        if (px > py && px > pz) {
+            max = px;
+        } else if (py > px && py > pz) {
+            max = py;
+        } else if (pz > px && pz > py) {
+            max = pz;
+        }
 
+        return max;
+    }
 }
