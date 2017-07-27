@@ -73,7 +73,8 @@ public class FileUtil {
     //获取视频存储路径
     public static DriveVideo getMediaOutputPath(Context mcontext) {
         String name = getTime();
-       // String rootPath = getStoragePath(mcontext,true);
+     //   String rootPath =  Environment.getExternalStorageDirectory().getPath();
+      //   rootPath = getStoragePath(mcontext,true);
         String vediopath = rootPath + "/vedio/" + name + ".mp4";
         File file = new File(rootPath + "/vedio");
         if (!file.exists()) {
@@ -364,7 +365,7 @@ public class FileUtil {
         }
         return paths;
     }
-    private static String getStoragePath(Context mContext, boolean is_removale) {
+    public static String getStoragePath(Context mContext, boolean is_removale) {
 
         StorageManager mStorageManager = (StorageManager) mContext.getSystemService(Context.STORAGE_SERVICE);
         Class<?> storageVolumeClazz = null;

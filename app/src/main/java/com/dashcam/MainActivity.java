@@ -176,6 +176,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     Toast.makeText(MainActivity.this, msg.obj.toString(), Toast.LENGTH_SHORT);
                     break;
                 case 9:
+
                     cameraSurfaceView.stopRecord();
                  //   new clearTFCardethread().start();
                     if (!IsStopRecord) {
@@ -210,6 +211,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         initData();
         initViews();
         context = this;
+        String SDpath = FileUtil.getStoragePath(context,true);
         registerReceiver(mbatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         BindReceiver();
 
@@ -218,6 +220,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void initData() {
         CheckPermissionsUtil checkPermissionsUtil = new CheckPermissionsUtil(this);
         checkPermissionsUtil.requestAllPermission(this);
+
         gpsLocationManager = GPSLocationManager.getInstances(MainActivity.this);
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         videoDb = new DriveVideoDbHelper(this);

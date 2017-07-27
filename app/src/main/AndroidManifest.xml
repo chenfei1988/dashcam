@@ -26,6 +26,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"></uses-permission>
 
 
+
     <application
         android:name=".base.MyAPP"
         android:allowBackup="true"
