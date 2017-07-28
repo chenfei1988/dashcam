@@ -25,15 +25,14 @@ public class VideoServer extends NanoHTTPD {
     private static final String REQUEST_ROOT = "/";
 
     private String mVideoFilePath;
-    private int mVideoWidth  = 0;
-    private int mVideoHeight = 0;
+    private int mVideoWidth  = 1280;
+    private int mVideoHeight = 720;
     private String mp4str ="";
 
-    public VideoServer(String filepath,int width,int height,int port) {
+    public VideoServer(String filepath) {
         super(DEFAULT_SERVER_PORT);
         mVideoFilePath = filepath;
-        mVideoWidth  = width;
-        mVideoHeight = height;
+
     }
 
     @Override

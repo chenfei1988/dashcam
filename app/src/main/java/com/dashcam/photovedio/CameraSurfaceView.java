@@ -22,7 +22,9 @@ import com.dashcam.base.RefreshEvent;
 
 import org.greenrobot.eventbus.EventBus;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -53,7 +55,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     private DriveVideoDbHelper videoDb ;
     private DriveVideo driveVideo;
     public static String COMPRESSOR_DIR = Environment.getExternalStorageDirectory() + File.separator  + "photo" + File.separator + "photomini" + File.separator;
-
+    private String rootPath ="";
     public CameraSurfaceView(Context context) {
         super(context);
         init(context);
@@ -72,6 +74,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     private void init(Context context) {
         this.context = context;
         videoDb = new DriveVideoDbHelper(context);
+        rootPath= FileUtil.getStoragePath(context,true);
         cameraState = CameraState.START;
         File mDirFile = new File(COMPRESSOR_DIR);
         if (!mDirFile.exists()) {
@@ -389,7 +392,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
      **/
     public void capture() {
         if (mCamera == null) return;
-        if (!FileUtil.isExternalStorageWritable()) {
+        if (!isExternalStorageWritable()) {
             Toast.makeText(context, "请插入存储卡", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -413,7 +416,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                         }
 
                         bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-                        String photopath =  FileUtil.saveBitmap(bitmap);
+                        String photopath =  saveBitmap(bitmap);
                         EventBus.getDefault().post(new RefreshEvent(1,compressor(photopath),""));
                         Toast.makeText(context, "拍照成功", Toast.LENGTH_SHORT).show();
                         startPreview();
@@ -443,7 +446,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     public boolean startRecord(int maxDurationMs, MediaRecorder.OnInfoListener onInfoListener) {
         if (mCamera == null) return false;
-        if (!FileUtil.isExternalStorageWritable()) {
+        if (!isExternalStorageWritable()) {
             Toast.makeText(context, "请插入存储卡", Toast.LENGTH_SHORT).show();
             return false;
         }
@@ -474,9 +477,8 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             mediaRecorder.setMaxDuration(maxDurationMs);
             mediaRecorder.setOnInfoListener(onInfoListener);
         }
-         driveVideo = FileUtil.getMediaOutputPath(context);
+         driveVideo = getMediaOutputPath();
          mediaRecorder.setOutputFile(driveVideo.getPath());
-      // mediaRecorder.setOutputFile(FileUtil.getMediaOutputPath1());
         try {
             mediaRecorder.prepare();
             mediaRecorder.start();
@@ -519,11 +521,54 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     /**_________________________________________________________________________________________**/
 
-    private static String getTime() {
-        return new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date(System.currentTimeMillis()));
-    }
+
     private String compressor(String path) {
         return mCompressor.compressToFile(new File(path)).getAbsolutePath();
     }
+    //保存照片
+    public String saveBitmap(Bitmap b) {
+        String jpegName = rootPath + "/photo/" + getTime() + ".jpg";
+        File file = new File(rootPath + "/photo");
+        if (!file.exists()) {
+            file.mkdirs();
+        }
+        try {
+            FileOutputStream fout = new FileOutputStream(jpegName);
+            BufferedOutputStream bos = new BufferedOutputStream(fout);
+            b.compress(Bitmap.CompressFormat.JPEG, 100, bos);
+            bos.flush();
+            bos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "";
+        }
 
+        return jpegName;
+    }
+
+    //获取视频存储路径
+    public  DriveVideo getMediaOutputPath() {
+        String name = getTime();
+        String filepath = rootPath + "/vedio";
+        File file = new File(filepath);
+        if (!file.exists()) {
+            file.mkdirs();
+        }
+        String vediopath = rootPath + "/vedio/" + name + ".mp4";
+        return new DriveVideo(name, 0, 480, vediopath);
+    }
+
+  /*  private  String getTime() {
+        return new SimpleDateFormat("yyyyMMdd-HH:mm:ss").format(new Date(System.currentTimeMillis()));
+    }*/
+    private  String getTime() {
+        return new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date(System.currentTimeMillis()));
+    }
+    public  boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
+    }
 }

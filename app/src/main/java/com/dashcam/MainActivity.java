@@ -83,25 +83,10 @@ import okhttp3.Response;
 import static com.dashcam.photovedio.FileUtil.getConnectedIP;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
-    @Bind(R.id.imei)
-    TextView imei;
-    @Bind(R.id.text_gps)
-    TextView textGps;
-    @Bind(R.id.btn_udpClose)
-    Button btnUdpClose;//关闭连接
-    @Bind(R.id.senddata)
-    Button btnSenddata;//发送数据
-    @Bind(R.id.btn_udpConn)
-    Button btnUdpConn; //建立连接
-    @Bind(R.id.txt_Send)
-    TextView txtSend;
-    @Bind(R.id.textview)
-    TextView textview;
-    @Bind(R.id.text_state)
-    TextView textState;
-    @Bind(R.id.btn_gps)
-    Button btnGps;
+
     private GPSLocationManager gpsLocationManager;
+    private String IMEI = "";
+    private String GPSSTR = ",,,";
     private UDPClient client = null;
     public static Context context;
     private final MyHandler myHandler = new MyHandler();
@@ -129,8 +114,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     MediaPlayer mediaPlayer;
     private SensorManager mSensorManager;
     private Sensor mSensor;
-
-
+    private static final String DEFAULT_FILE_PATH = Environment.getExternalStorageDirectory() + "/vedio/";
+    private VideoServer mVideoServer;
+    private MyBroadcastReceiver myBroadcastReceiver = new MyBroadcastReceiver();
+    private boolean IsCharge = false;//是否充电
     // private Timer recordtimer;
     private class MyHandler extends Handler {
 
@@ -139,13 +126,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             super.handleMessage(msg);
             switch (msg.what) {
                 case 1:
-
-                    udpSendStrBuf.append("发送的信息：" + msg.obj.toString());
-                    txtSend.setText(udpSendStrBuf.toString());
                     break;
                 case 2:
-                    udpSendStrBuf.append("发送的信息：" + msg.obj.toString());
-                    txtSend.setText(udpSendStrBuf.toString());
                     Calendar mCalendar = Calendar.getInstance();
                     long timestamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
                      if (timestamp-lastaccelerometertimestamp>300&&IsCharge == false){
@@ -153,14 +135,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                          IsStopRecord = true;
                          cameraSurfaceView.stopRecord();
                      }
-
                     break;
                 case 3:
-                    udpSendStrBuf.append("接收到信息：" + msg.obj.toString());
-                    txtSend.setText(udpSendStrBuf.toString());
                     break;
                 case 4:
-
                     break;
                 case 5:
                     Toast.makeText(MainActivity.this, "存储已满，请手动删除", Toast.LENGTH_SHORT);
@@ -169,14 +147,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     Toast.makeText(MainActivity.this, "存储已满，正在删除加锁视频", Toast.LENGTH_SHORT);
                     break;
                 case 7:
-                    udpSendStrBuf.append("当前余额：" + msg.obj.toString());
-                    txtSend.setText(udpSendStrBuf.toString());
+
                     break;
                 case 8:
-                    Toast.makeText(MainActivity.this, msg.obj.toString(), Toast.LENGTH_SHORT);
+
                     break;
                 case 9:
-
                     cameraSurfaceView.stopRecord();
                  //   new clearTFCardethread().start();
                     if (!IsStopRecord) {
@@ -195,12 +171,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
-    private static final String DEFAULT_FILE_PATH = Environment.getExternalStorageDirectory() + "/vedio/";
-    private static final int VIDEO_WIDTH = 320;
-    private static final int VIDEO_HEIGHT = 240;
-    private VideoServer mVideoServer;
-    private MyBroadcastReceiver myBroadcastReceiver = new MyBroadcastReceiver();
-    private boolean IsRecording = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -220,7 +191,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void initData() {
         CheckPermissionsUtil checkPermissionsUtil = new CheckPermissionsUtil(this);
         checkPermissionsUtil.requestAllPermission(this);
-
         gpsLocationManager = GPSLocationManager.getInstances(MainActivity.this);
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         videoDb = new DriveVideoDbHelper(this);
@@ -235,126 +205,47 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         lastaccelerometertimestamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);// TYPE_GRAVITY
+        IMEI = getid();
         if (null == mSensorManager) {
             Log.d("dfdfd", "deveice not support SensorManager");
         }
         // 参数三，检测的精准度
         mSensorManager.registerListener(this, mSensor,
                 SensorManager.SENSOR_DELAY_NORMAL);// SENSOR_DELAY_GAME
-
         myHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
                 myHandler.sendEmptyMessage(10);
             }
-        }, 5000);
+        }, 4000);
     }
 
     private void initViews() {
-        imei.setText(getid());
+
         cameraSurfaceView = (CameraSurfaceView) findViewById(R.id.cameraSurfaceView);
-        findViewById(R.id.capture).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                cameraSurfaceView.capture();
-            }
-        });
         gpsLocationManager.start(new MyListener());
         ExecutorService exec = Executors.newCachedThreadPool();
         client = new UDPClient();
         exec.execute(client);
-        btnUdpClose.setEnabled(true);
-        btnSenddata.setEnabled(true);
+
         if (timer1 == null) {
             timer1 = new Timer();
             timer1.schedule(task, 3000, 30000);
             //  timer.schedule(recordtask, 5000, 1000 * 4 * 3);
-           // timer1.schedule(new clearTFtask(), 3000, 1000 * 60 * 5);
-        }if (timer3 == null) {
+            // timer1.schedule(new clearTFtask(), 3000, 1000 * 60 * 5);
+        }
+        if (timer3 == null) {
             timer3 = new Timer();
-           // timer3.schedule(task, 3000, 30000);
+            // timer3.schedule(task, 3000, 30000);
             //  timer.schedule(recordtask, 5000, 1000 * 4 * 3);
             timer3.schedule(clearTFtask, 3000, 1000 * 60 * 5);
         }
-
-
         smsReceiver = new SmsReceiver();
         IntentFilter filter = new IntentFilter("android.provider.Telephony.SMS_RECEIVED");
         filter.setPriority(Integer.MAX_VALUE);
         registerReceiver(smsReceiver, filter);
-        mVideoServer = new VideoServer(DEFAULT_FILE_PATH, VIDEO_WIDTH, VIDEO_HEIGHT, VideoServer.DEFAULT_SERVER_PORT);
-        ((ToggleButton) findViewById(R.id.record)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(final CompoundButton buttonView, boolean isChecked) {
+        mVideoServer = new VideoServer(DEFAULT_FILE_PATH);
 
-                if (isChecked) {
-                    //  cameraSurfaceView.startRecord();
-
-
-                    //  StartRecord();
-                    //设置录制时长为10秒视频
-//                    cameraSurfaceView.startRecord(10000, new MediaRecorder.OnInfoListener() {
-//                        @Override
-//                        public void onInfo(MediaRecorder mr, int what, int extra) {
-//                            cameraSurfaceView.stopRecord();
-//                            buttonView.setChecked(false);
-//                        }
-//                    });
-                } else
-                    // StopRecord();
-                    IsStopRecord = true;
-                cameraSurfaceView.stopRecord();
-              /*  if (isChecked) {
-                    if (timer2 == null) {
-                        timer2 = new Timer();
-                        timer2.schedule(new recordtask(), 1000, 1000 * 60 * 3);
-                        //  timer.schedule(recordtask, 5000, 1000 * 4 * 3);
-                        //  timer.schedule(clearTFtask, 13000, 1000 * 60 * 5);
-                    }
-                    if (timer3 == null) {
-                        timer3 = new Timer();
-                        timer3.schedule(new clearTFtask(), 13000, 1000 * 60 * 5);
-                        //  timer.schedule(recordtask, 5000, 1000 * 4 * 3);
-                        //  timer.schedule(clearTFtask, 13000, 1000 * 60 * 5);
-                    }
-                } else {
-                    if (timer2 != null) {
-                        timer2.cancel();
-                        timer2 = null;
-                    }
-                    if (timer3 != null) {
-                        timer3.cancel();
-                        timer3 = null;
-                    }
-                    cameraSurfaceView.stopRecord();
-                }*/
-
-            }
-        });
-        ((ToggleButton) findViewById(R.id.runBack)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                cameraSurfaceView.setRunBack(isChecked);
-            }
-        });
-        ((ToggleButton) findViewById(R.id.switchCamera)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                cameraSurfaceView.setDefaultCamera(!isChecked);
-            }
-        });
-        ((ToggleButton) findViewById(R.id.openwifi)).setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    setBrightnessMode();
-
-                } else {
-                    closeWifiHotspot();
-                }
-
-            }
-        });
     }
 
     class MyListener implements GPSLocationListener {
@@ -362,8 +253,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         @Override
         public void UpdateLocation(Location location) {
             if (location != null) {
-                textGps.setText(location.getLongitude() + "," + location.getLatitude()+","+location.getSpeed()+","+location.getBearing());
-
+                GPSSTR = location.getLongitude() + "," + location.getLatitude()+","+location.getSpeed()+","+location.getBearing();
+              //  textGps.setText(location.getLongitude() + "," + location.getLatitude()+","+location.getSpeed()+","+location.getBearing());
             }
         }
 
@@ -395,106 +286,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
     }
-
+/*
+获取IMEI
+ */
     public String getid() {
         TelephonyManager TelephonyMgr = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
         String ID = TelephonyMgr.getDeviceId();
         return ID;
-    }
-
-
-    @OnClick({R.id.btn_gps, R.id.testled, R.id.btn_udpConn, R.id.btn_udpClose, R.id.voladd, R.id.voljian,
-            R.id.yue, R.id.iplist, R.id.updatewifipassword, R.id.network, R.id.reboot, R.id.senddata})
-    public void onClick(View view) {
-        switch (view.getId()) {
-            case R.id.btn_gps:
-                //   gpsLocationManager.start(new MyListener());
-                break;
-            case R.id.btn_udpConn:
-                try {
-                    mVideoServer.start();
-                    //   btnGps.setText("请在远程浏览器中输入:\n\n"+getLocalIpStr(this)+":"+VideoServer.DEFAULT_SERVER_PORT);
-                    btnGps.setText("请在远程浏览器中输入:192.168.43.1" + ":" + VideoServer.DEFAULT_SERVER_PORT);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    Toast.makeText(MainActivity.this, "HTTP服务器开启失败：" + e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-             /*   ExecutorService exec = Executors.newCachedThreadPool();
-                client = new UDPClient();
-                exec.execute(client);
-                btnUdpClose.setEnabled(true);
-                btnSenddata.setEnabled(true);*/
-                break;
-            case R.id.btn_udpClose:
-                client.setUdpLife(false);
-                btnUdpConn.setEnabled(true);
-                btnUdpClose.setEnabled(false);
-                btnSenddata.setEnabled(false);
-                break;
-            case R.id.senddata:
-              /*  Thread thread = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Message message = new Message();
-                        message.what = 2;
-                        if (textGps.getText().toString() != "") {
-                            String sendtext="*"+imei.getText().toString().trim()+"1,"
-                                    +textGps.getText().toString().trim()+",0,0#";
-                            client.send(sendtext);
-                            message.obj = sendtext;
-                            myHandler.sendMessage(message);
-                        }
-                    }
-                });
-                thread.start();*/
-                break;
-            case R.id.testled:
-                cameraSurfaceView.switchLight(true);
-
-                break;
-            case R.id.voladd:
-                curVolume += stepVolume;
-                if (curVolume >= maxVolume) {
-                    curVolume = maxVolume;
-                }
-                // 调整音量
-                adjustVolume();
-                break;
-            case R.id.voljian:
-                curVolume -= stepVolume;
-                if (curVolume <= 0) {
-                    curVolume = 0;
-                }
-                // 调整音量
-                adjustVolume();
-                break;
-            case R.id.yue:
-                FileUtil.sendSMS("10086", "cxye");
-                break;
-            case R.id.iplist:
-                ArrayList<String> connectedIP = getConnectedIP();
-                StringBuilder resultList = new StringBuilder();
-                for (String ip : connectedIP) {
-                    resultList.append(ip);
-                    resultList.append(",");
-                }
-                resultList.substring(0, resultList.length() - 1);
-                Toast.makeText(MainActivity.this, resultList, Toast.LENGTH_LONG);
-                break;
-            case R.id.updatewifipassword:
-                closeWifiHotspot();
-                SPUtils.put(MainActivity.this, "wifipassword", "789456123");
-                createWifiHotspot();
-                break;
-            case R.id.network:
-                FileUtil.getCurrentNetDBM(MainActivity.this);
-                break;
-            case R.id.reboot:
-                PowerManager pManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
-                pManager.reboot("重启");
-                ;
-                break;
-        }
     }
 
     /**
@@ -524,16 +322,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Method method = wifiManager.getClass().getMethod(
                     "setWifiApEnabled", WifiConfiguration.class, Boolean.TYPE);
             boolean enable = (Boolean) method.invoke(wifiManager, config, true);
-            if (enable) {
-                textview.setText("热点已开启 SSID:" + WIFI_HOTSPOT_SSID + MacUtils.getMacAddr() + " password:123456789");
-
-            } else {
-                textview.setText("创建热点失败");
-            }
             return enable;
         } catch (Exception e) {
             e.printStackTrace();
-            textview.setText("创建热点失败");
             return false;
 
         }
@@ -558,10 +349,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         } catch (InvocationTargetException e) {
             e.printStackTrace();
         }
-        textview.setText("热点已关闭");
-        textState.setText("wifi已关闭");
     }
-
+/*
+  开启wifi
+ */
     private void setBrightnessMode() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (!Settings.System.canWrite(context)) {
@@ -575,45 +366,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
     }
-
+/*
+上传GPS位置信息
+ */
     TimerTask task = new TimerTask() {
         @Override
         public void run() {
             Message message = new Message();
             message.what = 2;
-            //  if (textGps.getText().toString() != "") {
-            String sendtext = "*" + imei.getText().toString().trim() + ",1,"
-                    + textGps.getText().toString().trim() + "#";
+            String sendtext = "*" + IMEI + ",1,"
+                    + GPSSTR + "#";
             client.send(sendtext);
             message.obj = sendtext;
             myHandler.sendMessage(message);
-            // }
+
+            //每隔30秒判断车辆是否停止，如果停止，则关闭录像
         }
     };
-
-    /*  class recordtask extends TimerTask {
-          @Override
-          public void run() {
-              if (!IsRecording && OpenRecord == 0) {
-                  cameraSurfaceView.startRecord();
-                  IsRecording = true;
-              } else {
-                  cameraSurfaceView.stopRecord();
-                  if (OpenRecord == 0) {
-                      cameraSurfaceView.startRecord();
-                  }
-              }
-           /*   Message message = new Message();
-              message.what = 4;
-              myHandler.sendMessage(message);
-          }
-      };*/
-   /* class clearTFCardethread extends Thread {
-        @Override
-        public void run() {
-            deleteOldestUnlockVideo();
-        }
-    }*/
 
     TimerTask clearTFtask = new TimerTask() {
         @Override
@@ -638,7 +407,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                      if (mJsonObject.getBoolean("success")) {
                                          String backurl = mJsonObject.getString("msg");
                                          backurl = backurl.substring(0, backurl.length() - 1);
-                                         backurl = "*" + imei.getText().toString().trim() + ",2," + backurl + "#";
+                                         backurl = "*" + IMEI + ",2," + backurl + "#";
                                          final String url = backurl;
                                          new Thread(
                                                  new Runnable() {
@@ -672,25 +441,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Subscribe(threadMode = ThreadMode.BACKGROUND)
     public void onEvnet(RefreshEvent refresh) {
-        if (refresh.getYwlx() == 1) {
+        if (refresh.getYwlx() == 1) {  //上传图片
             savePicture(refresh.getPhotopath());
-        } else if (refresh.getYwlx() == 2) {
+        } else if (refresh.getYwlx() == 2) { //获取余额
 
-            String sendtext = "*" + imei.getText().toString().trim() + ",6,"
+            String sendtext = "*" + IMEI + ",6,"
                     + refresh.getPhotopath() + "#";
             client.send(sendtext);
-           /* Message message = Message.obtain();
-            message.what = 7;
-            message.obj = refresh.getPhotopath();
-            myHandler.sendMessage(message);*/
-        } else if (refresh.getYwlx() == 3) {
-            String sendtext = "*" + imei.getText().toString().trim() + ",8,"
+        } else if (refresh.getYwlx() == 3) {   //获取4G信号
+            String sendtext = "*" + IMEI + ",8,"
                     + refresh.getPhotopath() + "#";
             client.send(sendtext);
-           /* Message message = Message.obtain();
-            message.what = 8;
-            message.obj = refresh.getPhotopath();
-            myHandler.sendMessage(message);*/
         }
     }
 
@@ -827,9 +588,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         String[] types = msg.split(",");
         if (types.length >= 2) {
+            SendCommonReply(types[1]);
             switch (types[1]) {
                 case "99":// 微信公众号抓拍的协议，我这边接受服务器的指令，拍照并上传，并把照片路径发送给服务器
                     cameraSurfaceView.capture();
+
                     break;
                 case "98"://查看热点连接的IP地址列表
                     ArrayList<String> connectedIP = getConnectedIP();
@@ -838,7 +601,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         resultList.append(ip);
                         resultList.append("@");
                     }
-                    final String sendtext = "*" + imei.getText().toString().trim() + ",3,"
+                    final String sendtext = "*" + IMEI + ",3,"
                             + resultList.substring(0, resultList.length() - 1) + "#";
                     new Thread(new Runnable() {
                         @Override
@@ -855,10 +618,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         boolean success = createWifiHotspot();
                         String updatewifetext = "";
                         if (success) {
-                            updatewifetext = "*" + imei.getText().toString().trim() + ",4,"
+                            updatewifetext = "*" + IMEI + ",4,"
                                     + 0 + "#";
                         } else {
-                            updatewifetext = "*" + imei.getText().toString().trim() + ",4,"
+                            updatewifetext = "*" + IMEI + ",4,"
                                     + 1 + "#";
                         }
                         final String passwordtext = updatewifetext;
@@ -886,7 +649,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         }
                         // 调整音量
                         adjustVolume();
-                        final String volumetext = "*" + imei.getText().toString().trim() + ",7,"
+                        final String volumetext = "*" + IMEI + ",7,"
                                 + curVolume + "#";
                         new Thread(new Runnable() {
                             @Override
@@ -915,7 +678,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                             success = cameraSurfaceView.setDefaultCamera(false);
                         }
 
-                        final String volumetext = "*" + imei.getText().toString().trim() + ",10,"
+                        final String volumetext = "*" + IMEI + ",10,"
                                 + Carmertype + "," + (success == true ? 0 : 1) + "#";
                         new Thread(new Runnable() {
                             @Override
@@ -934,29 +697,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         } else {
                             PlayMusic(MainActivity.this, 1);
                         }
-                        // StartRecord();
-
-                   /* if (!cameraSurfaceView.isRecording) {
-                        if (timer2 == null) {
-                            timer2 = new Timer();
-                            timer2.schedule(new recordtask(), 0, 1000 * 60 * 3);
-                            //  timer.schedule(recordtask, 5000, 1000 * 4 * 3);
-                            //  timer.schedule(clearTFtask, 13000, 1000 * 60 * 5);
-                        }
-                        if (timer3 == null) {
-                            timer3 = new Timer();
-                            timer3.schedule(new clearTFtask(), 13000, 1000 * 60 * 5);
-                            //  timer.schedule(recordtask, 5000, 1000 * 4 * 3);
-                            //  timer.schedule(clearTFtask, 13000, 1000 * 60 * 5);
-                        }
-                        IsRecording = cameraSurfaceView.isRecording;
-                        if (IsRecording) {
-                            OpenRecord = 0;
-                        }*/
                         new Handler().postDelayed(new Runnable() {
                             public void run() {
                                 //execute the task
-                                final String opentext = "*" + imei.getText().toString().trim() + ",11," +
+                                final String opentext = "*" + IMEI + ",11," +
                                         +(cameraSurfaceView.isRecording == true ? 0 : 1) + "#";
 
                                 new Thread(new Runnable() {
@@ -969,7 +713,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         }, 14000);
                         ;
                     } else {
-                        recordopentext = "*" + imei.getText().toString().trim() + ",11," +
+                        recordopentext = "*" + IMEI + ",11," +
                                 +(0) + "#";
                         final String opentext = recordopentext;
                         new Thread(new Runnable() {
@@ -985,7 +729,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     String recordclosetext = "";
                     IsStopRecord = true;
                     cameraSurfaceView.stopRecord();
-                    recordclosetext = "*" + imei.getText().toString().trim() + ",12," +
+                    recordclosetext = "*" + IMEI + ",12," +
                             +(cameraSurfaceView.isRecording == true ? 1 : 0) + "#";
                     final String closetext = recordclosetext;
                     new Thread(new Runnable() {
@@ -1002,7 +746,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         String time2 = types[3];
                         filenamestext = FileUtil.GetTimeFiles(DEFAULT_FILE_PATH, time1, time2);
                     }
-                    filenamestext = "*" + imei.getText().toString().trim() + ",13," +
+                    filenamestext = "*" + IMEI + ",13," +
                             filenamestext + "#";
                     final String sendfilenamestext = filenamestext;
                     new Thread(new Runnable() {
@@ -1034,7 +778,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     public void run() {
                         myHandler.sendEmptyMessage(9);
                     }
-                }, 3 * 60 * 1000);
+                }, 1 * 60 * 1000);
 
             } catch (IllegalStateException e) {
                 // TODO Auto-generated catch block
@@ -1060,7 +804,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                      if (mJsonObject.getBoolean("success")) {
                                          String backurl = mJsonObject.getString("msg");
                                          backurl = backurl.substring(0, backurl.length() - 1);
-                                         backurl = "*" + imei.getText().toString().trim() + ",14," + backurl + "#";
+                                         backurl = "*" + IMEI + ",14," + backurl + "#";
                                          final String url = backurl;
                                          new Thread(
                                                  new Runnable() {
@@ -1131,7 +875,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
 
-    private boolean IsCharge = false;
+
     /*
     充电状态获取
      */
@@ -1216,6 +960,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             return true;
         }*/
         return super.onKeyDown(keyCode, event);
+    }
+
+    private void SendCommonReply(final String zlbh){
+
+        new Thread(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        String url = "*"+IMEI+",0,"+zlbh+"#";
+                        client.send(url);
+                    }
+                }
+        ).start();
+
     }
 }
 
