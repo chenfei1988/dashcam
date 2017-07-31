@@ -74,7 +74,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     private void init(Context context) {
         this.context = context;
         videoDb = new DriveVideoDbHelper(context);
-        rootPath= FileUtil.getStoragePath(context,true);
+        rootPath= FileUtil.getStoragePath(context,false);
         cameraState = CameraState.START;
         File mDirFile = new File(COMPRESSOR_DIR);
         if (!mDirFile.exists()) {
@@ -401,7 +401,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     @Override
     public void onAutoFocus(boolean success, Camera camera) {
-        if (success) {
+       // if (success) {
             try {
                 mCamera.takePicture(null, null, new Camera.PictureCallback() {
                     @Override
@@ -427,7 +427,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                     Toast.makeText(context, "请先结束录像", Toast.LENGTH_SHORT).show();
                 }
             }
-        }
+      //  }
     }
 
     /**

@@ -8,7 +8,7 @@ import android.util.Log;
 public class ApiInterface {
 
 
-    public static final String MAIN_URL = "http://139.129.193.52:8383/CPS/";
+    public static final String MAIN_URL = "http://zfcg.cqxyyxxkj.cn:9090/CPS/";
 
     /**
      * 上传图片
