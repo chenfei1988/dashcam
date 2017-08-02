@@ -554,6 +554,14 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         if (!file.exists()) {
             file.mkdirs();
         }
+        /*
+        此文件夹为不能删除的录像
+         */
+        String dangerfilepath = rootPath+"/dangervedio";
+        File dangerfile = new File(dangerfilepath);
+        if (!dangerfile.exists()) {
+            dangerfile.mkdirs();
+        }
         String vediopath = rootPath + "/vedio/" + name + ".mp4";
         return new DriveVideo(name, 0, 480, vediopath);
     }

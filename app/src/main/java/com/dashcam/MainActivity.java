@@ -1,5 +1,8 @@
 package com.dashcam;
 
+import android.app.AppOpsManager;
+import android.app.usage.NetworkStats;
+import android.app.usage.NetworkStatsManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -13,6 +16,7 @@ import android.hardware.camera2.CameraManager;
 import android.location.Location;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
@@ -24,6 +28,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.PowerManager;
+import android.os.RemoteException;
 import android.provider.Settings;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
@@ -185,12 +190,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         String SDpath = FileUtil.getStoragePath(context,true);
         registerReceiver(mbatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         BindReceiver();
+        setBrightnessMode();//开启Wifi
 
     }
 
-    private void initData() {
+    private void initData()  {
         CheckPermissionsUtil checkPermissionsUtil = new CheckPermissionsUtil(this);
         checkPermissionsUtil.requestAllPermission(this);
+        if(hasPermissionToReadNetworkStats()) {
+            NetworkStatsManager networkStatsManager = (NetworkStatsManager) getSystemService(NETWORK_STATS_SERVICE);
+            NetworkStats.Bucket bucket = null;
+// 获取到目前为止设备的Wi-Fi流量统计
+            try {
+                bucket = networkStatsManager.querySummaryForDevice(ConnectivityManager.TYPE_WIFI, "", 0, System.currentTimeMillis());
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+            Log.i("Info", "Total: " + (bucket.getRxBytes() + bucket.getTxBytes()));
+        }
+
+
         gpsLocationManager = GPSLocationManager.getInstances(MainActivity.this);
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         videoDb = new DriveVideoDbHelper(this);
@@ -406,7 +425,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                      JSONObject mJsonObject = new JSONObject(s);
                                      if (mJsonObject.getBoolean("success")) {
                                          String backurl = mJsonObject.getString("msg");
-                                         backurl = backurl.substring(0, backurl.length() - 1);
                                          backurl = "*" + IMEI + ",2," + backurl + "#";
                                          final String url = backurl;
                                          new Thread(
@@ -803,7 +821,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                      JSONObject mJsonObject = new JSONObject(s);
                                      if (mJsonObject.getBoolean("success")) {
                                          String backurl = mJsonObject.getString("msg");
-                                         backurl = backurl.substring(0, backurl.length() - 1);
+                                     //    backurl = backurl.substring(0, backurl.length() - 1);
                                          backurl = "*" + IMEI + ",14," + backurl + "#";
                                          final String url = backurl;
                                          new Thread(
@@ -974,6 +992,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
         ).start();
 
+    }
+    public static long getTimesMonthMorning() {
+        Calendar cal = Calendar.getInstance();
+        cal.set(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH), 0, 0, 0);
+        cal.set(Calendar.DAY_OF_MONTH, cal.getActualMinimum(Calendar.DAY_OF_MONTH));
+        return cal.getTimeInMillis();
+    }
+    private boolean hasPermissionToReadNetworkStats() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return true;
+        }
+        final AppOpsManager appOps = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
+        int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
+                android.os.Process.myUid(), getPackageName());
+        if (mode == AppOpsManager.MODE_ALLOWED) {
+            return true;
+        }
+
+        requestReadNetworkStats();
+        return false;
+    }
+    // 打开“有权查看使用情况的应用”页面
+    private void requestReadNetworkStats() {
+        Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+        startActivity(intent);
     }
 }
 

@@ -5,10 +5,10 @@ android {
     buildToolsVersion "24.0.2"
     defaultConfig {
         applicationId "com.dashcam"
-        minSdkVersion 19
+        minSdkVersion 23
         targetSdkVersion 24
         versionCode 1
-        versionName "1.0"
+        versionName "1.01"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
       //  jackOptions{
      //       enabled true
