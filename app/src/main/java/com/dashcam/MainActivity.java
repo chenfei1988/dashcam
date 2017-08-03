@@ -42,6 +42,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import com.baidu.location.BDLocation;
+import com.baidu.location.BDLocationListener;
 import com.dashcam.base.ApiInterface;
 import com.dashcam.base.DateUtils;
 import com.dashcam.base.MacUtils;
@@ -51,6 +53,7 @@ import com.dashcam.httpservers.VideoServer;
 import com.dashcam.location.GPSLocationListener;
 import com.dashcam.location.GPSLocationManager;
 import com.dashcam.location.GPSProviderStatus;
+import com.dashcam.location.LocationUtil;
 import com.dashcam.photovedio.CameraSurfaceView;
 import com.dashcam.photovedio.CheckPermissionsUtil;
 import com.dashcam.photovedio.DriveVideo;
@@ -87,9 +90,9 @@ import okhttp3.Response;
 
 import static com.dashcam.photovedio.FileUtil.getConnectedIP;
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener {
+public class MainActivity extends AppCompatActivity implements SensorEventListener, BDLocationListener {
 
-    private GPSLocationManager gpsLocationManager;
+   // private GPSLocationManager gpsLocationManager;
     private String IMEI = "";
     private String GPSSTR = ",,,";
     private UDPClient client = null;
@@ -123,6 +126,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private VideoServer mVideoServer;
     private MyBroadcastReceiver myBroadcastReceiver = new MyBroadcastReceiver();
     private boolean IsCharge = false;//是否充电
+    LocationUtil mLocationUtil;
+    @Override
+    public void onReceiveLocation(BDLocation location) {
+        if (location != null) {
+            GPSSTR = location.getLongitude() + "," + location.getLatitude()+","+location.getSpeed()+","+location.getDirection();
+            Toast.makeText(MainActivity.this,GPSSTR,Toast.LENGTH_LONG);
+            //  textGps.setText(location.getLongitude() + "," + location.getLatitude()+","+location.getSpeed()+","+location.getBearing());
+        }
+    }
+
+    @Override
+    public void onConnectHotSpotMessage(String s, int i) {
+
+    }
+
     // private Timer recordtimer;
     private class MyHandler extends Handler {
 
@@ -210,7 +228,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
 
-        gpsLocationManager = GPSLocationManager.getInstances(MainActivity.this);
+        mLocationUtil = new LocationUtil(this, this);
+        mLocationUtil.startLocate();
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         videoDb = new DriveVideoDbHelper(this);
         audioMgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
@@ -242,7 +261,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void initViews() {
 
         cameraSurfaceView = (CameraSurfaceView) findViewById(R.id.cameraSurfaceView);
-        gpsLocationManager.start(new MyListener());
+        //cameraSurfaceView.setVisibility(View.GONE);
+     //   gpsLocationManager.start(new MyListener());
         ExecutorService exec = Executors.newCachedThreadPool();
         client = new UDPClient();
         exec.execute(client);
@@ -264,48 +284,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         filter.setPriority(Integer.MAX_VALUE);
         registerReceiver(smsReceiver, filter);
         mVideoServer = new VideoServer(DEFAULT_FILE_PATH);
-
     }
-
-    class MyListener implements GPSLocationListener {
-
-        @Override
-        public void UpdateLocation(Location location) {
-            if (location != null) {
-                GPSSTR = location.getLongitude() + "," + location.getLatitude()+","+location.getSpeed()+","+location.getBearing();
-              //  textGps.setText(location.getLongitude() + "," + location.getLatitude()+","+location.getSpeed()+","+location.getBearing());
-            }
-        }
-
-        @Override
-        public void UpdateStatus(String provider, int status, Bundle extras) {
-            if ("gps" == provider) {
-                Toast.makeText(MainActivity.this, "定位类型：" + provider, Toast.LENGTH_SHORT).show();
-            }
-        }
-
-        @Override
-        public void UpdateGPSProviderStatus(int gpsStatus) {
-            switch (gpsStatus) {
-                case GPSProviderStatus.GPS_ENABLED:
-                    Toast.makeText(MainActivity.this, "GPS开启", Toast.LENGTH_SHORT).show();
-                    break;
-                case GPSProviderStatus.GPS_DISABLED:
-                    Toast.makeText(MainActivity.this, "GPS关闭", Toast.LENGTH_SHORT).show();
-                    break;
-                case GPSProviderStatus.GPS_OUT_OF_SERVICE:
-                    Toast.makeText(MainActivity.this, "GPS不可用", Toast.LENGTH_SHORT).show();
-                    break;
-                case GPSProviderStatus.GPS_TEMPORARILY_UNAVAILABLE:
-                    Toast.makeText(MainActivity.this, "GPS暂时不可用", Toast.LENGTH_SHORT).show();
-                    break;
-                case GPSProviderStatus.GPS_AVAILABLE:
-                    Toast.makeText(MainActivity.this, "GPS可用啦", Toast.LENGTH_SHORT).show();
-                    break;
-            }
-        }
-    }
-/*
+  /*
 获取IMEI
  */
     public String getid() {
@@ -781,6 +761,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                     }
                     break;
+                default:
+                    break;
 
             }
 
@@ -964,12 +946,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         IsStopRecord = true;
         unregisterReceiver(smsReceiver);
         unregisterReceiver(mbatteryReceiver);
+        unregisterReceiver(myBroadcastReceiver);
         EventBus.getDefault().unregister(this);
         if (mediaPlayer != null && mediaPlayer.isPlaying()) {
             mediaPlayer.stop();
             mediaPlayer.release();
             mediaPlayer = null;
         }
+        mLocationUtil.stopLocate();
     }
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
@@ -1010,7 +994,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             return true;
         }
 
-        requestReadNetworkStats();
+     //   requestReadNetworkStats();
         return false;
     }
     // 打开“有权查看使用情况的应用”页面

@@ -75,6 +75,9 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         this.context = context;
         videoDb = new DriveVideoDbHelper(context);
         rootPath= FileUtil.getStoragePath(context,false);
+      /*  if (rootPath.equals("")||rootPath==null){
+            rootPath= FileUtil.getStoragePath(context,false);
+        }*/
         cameraState = CameraState.START;
         File mDirFile = new File(COMPRESSOR_DIR);
         if (!mDirFile.exists()) {
