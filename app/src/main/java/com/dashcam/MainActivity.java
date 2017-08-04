@@ -11,9 +11,6 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraManager;
-import android.location.Location;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.ConnectivityManager;
@@ -28,6 +25,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.PowerManager;
+import android.os.Process;
 import android.os.RemoteException;
 import android.provider.Settings;
 import android.support.annotation.Nullable;
@@ -35,12 +33,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.KeyEvent;
-import android.view.View;
-import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
 import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
@@ -50,9 +44,6 @@ import com.dashcam.base.MacUtils;
 import com.dashcam.base.RefreshEvent;
 import com.dashcam.base.SPUtils;
 import com.dashcam.httpservers.VideoServer;
-import com.dashcam.location.GPSLocationListener;
-import com.dashcam.location.GPSLocationManager;
-import com.dashcam.location.GPSProviderStatus;
 import com.dashcam.location.LocationUtil;
 import com.dashcam.photovedio.CameraSurfaceView;
 import com.dashcam.photovedio.CheckPermissionsUtil;
@@ -69,8 +60,6 @@ import org.greenrobot.eventbus.ThreadMode;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -83,7 +72,6 @@ import java.util.concurrent.Executors;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
-import butterknife.OnClick;
 import okhttp3.Call;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -92,7 +80,9 @@ import static com.dashcam.photovedio.FileUtil.getConnectedIP;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener, BDLocationListener {
 
-   // private GPSLocationManager gpsLocationManager;
+    @Bind(R.id.liuliang)
+    TextView liuliang;
+    // private GPSLocationManager gpsLocationManager;
     private String IMEI = "";
     private String GPSSTR = ",,,";
     private UDPClient client = null;
@@ -127,11 +117,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private MyBroadcastReceiver myBroadcastReceiver = new MyBroadcastReceiver();
     private boolean IsCharge = false;//是否充电
     LocationUtil mLocationUtil;
+
     @Override
     public void onReceiveLocation(BDLocation location) {
         if (location != null) {
-            GPSSTR = location.getLongitude() + "," + location.getLatitude()+","+location.getSpeed()+","+location.getDirection();
-            Toast.makeText(MainActivity.this,GPSSTR,Toast.LENGTH_LONG);
+            GPSSTR = location.getLongitude() + "," + location.getLatitude() + "," + location.getSpeed() + "," + location.getDirection();
+            Toast.makeText(MainActivity.this, GPSSTR, Toast.LENGTH_LONG);
             //  textGps.setText(location.getLongitude() + "," + location.getLatitude()+","+location.getSpeed()+","+location.getBearing());
         }
     }
@@ -153,11 +144,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 case 2:
                     Calendar mCalendar = Calendar.getInstance();
                     long timestamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
-                     if (timestamp-lastaccelerometertimestamp>300&&IsCharge == false){
+                    if (timestamp - lastaccelerometertimestamp > 300 && IsCharge == false) {
 
-                         IsStopRecord = true;
-                         cameraSurfaceView.stopRecord();
-                     }
+                        IsStopRecord = true;
+                        cameraSurfaceView.stopRecord();
+                    }
                     break;
                 case 3:
                     break;
@@ -177,7 +168,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     break;
                 case 9:
                     cameraSurfaceView.stopRecord();
-                 //   new clearTFCardethread().start();
+                    //   new clearTFCardethread().start();
                     if (!IsStopRecord) {
                         StartRecord();
                     }
@@ -195,7 +186,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -205,17 +195,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         initData();
         initViews();
         context = this;
-        String SDpath = FileUtil.getStoragePath(context,true);
         registerReceiver(mbatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         BindReceiver();
         setBrightnessMode();//开启Wifi
 
     }
 
-    private void initData()  {
+    private void initData() {
         CheckPermissionsUtil checkPermissionsUtil = new CheckPermissionsUtil(this);
         checkPermissionsUtil.requestAllPermission(this);
-        if(hasPermissionToReadNetworkStats()) {
+        if (hasPermissionToReadNetworkStats()) {
             NetworkStatsManager networkStatsManager = (NetworkStatsManager) getSystemService(NETWORK_STATS_SERVICE);
             NetworkStats.Bucket bucket = null;
 // 获取到目前为止设备的Wi-Fi流量统计
@@ -224,7 +213,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
-            Log.i("Info", "Total: " + (bucket.getRxBytes() + bucket.getTxBytes()));
+            liuliang.setText(bucket.getRxBytes() + bucket.getTxBytes()+"B");
         }
 
 
@@ -262,7 +251,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         cameraSurfaceView = (CameraSurfaceView) findViewById(R.id.cameraSurfaceView);
         //cameraSurfaceView.setVisibility(View.GONE);
-     //   gpsLocationManager.start(new MyListener());
+        //   gpsLocationManager.start(new MyListener());
         ExecutorService exec = Executors.newCachedThreadPool();
         client = new UDPClient();
         exec.execute(client);
@@ -285,9 +274,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         registerReceiver(smsReceiver, filter);
         mVideoServer = new VideoServer(DEFAULT_FILE_PATH);
     }
-  /*
-获取IMEI
- */
+
+    /*
+  获取IMEI
+   */
     public String getid() {
         TelephonyManager TelephonyMgr = (TelephonyManager) getSystemService(TELEPHONY_SERVICE);
         String ID = TelephonyMgr.getDeviceId();
@@ -297,14 +287,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     /**
      * 创建Wifi热点
      */
-    private boolean createWifiHotspot() {
+    private boolean createWifiHotspot(String name, String password) {
         if (wifiManager.isWifiEnabled()) {
             //如果wifi处于打开状态，则关闭wifi,
             wifiManager.setWifiEnabled(false);
         }
         WifiConfiguration config = new WifiConfiguration();
-        config.SSID = WIFI_HOTSPOT_SSID + MacUtils.getMacAddr();
-        String password = (String) SPUtils.get(MainActivity.this, "wifipassword", "12345678");
+        if (name.equals("")) {
+            name = (String) SPUtils.get(MainActivity.this, "wifiname", WIFI_HOTSPOT_SSID + MacUtils.getMacAddr());
+        }
+        config.SSID = name;
+        if (password.equals("")) {
+            password = (String) SPUtils.get(MainActivity.this, "wifipassword", "12345678");
+        }
         config.preSharedKey = password;
         config.hiddenSSID = true;
         config.allowedAuthAlgorithms
@@ -332,7 +327,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     /**
      * 关闭WiFi热点
      */
-    public void closeWifiHotspot() {
+    public boolean closeWifiHotspot() {
+        boolean success = true;
         try {
             Method method = wifiManager.getClass().getMethod("getWifiApConfiguration");
             method.setAccessible(true);
@@ -340,18 +336,24 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Method method2 = wifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
             method2.invoke(wifiManager, config, false);
         } catch (NoSuchMethodException e) {
+            success = false;
             e.printStackTrace();
         } catch (IllegalArgumentException e) {
+            success = false;
             e.printStackTrace();
         } catch (IllegalAccessException e) {
+            success = false;
             e.printStackTrace();
         } catch (InvocationTargetException e) {
+            success = false;
             e.printStackTrace();
         }
+        return success;
     }
-/*
-  开启wifi
- */
+
+    /*
+      开启wifi
+     */
     private void setBrightnessMode() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (!Settings.System.canWrite(context)) {
@@ -361,13 +363,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 context.startActivity(intent);
             } else {
                 //有了权限，具体的动作
-                createWifiHotspot();
+                createWifiHotspot("", "");
             }
         }
     }
-/*
-上传GPS位置信息
- */
+
+    /*
+    上传GPS位置信息
+     */
     TimerTask task = new TimerTask() {
         @Override
         public void run() {
@@ -613,7 +616,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     if (types.length == 3) {
                         closeWifiHotspot();
                         SPUtils.put(MainActivity.this, "wifipassword", types[2]);
-                        boolean success = createWifiHotspot();
+                        boolean success = createWifiHotspot("", types[2]);
                         String updatewifetext = "";
                         if (success) {
                             updatewifetext = "*" + IMEI + ",4,"
@@ -758,7 +761,46 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     if (types.length == 3) {
                         String filename = types[2];
                         saveFile(DEFAULT_FILE_PATH + filename);
+                    }
+                    break;
+                case "86"://开启WIFI  *终端编号,86#
+                    closeWifiHotspot();
+                    boolean startwifisuccess = createWifiHotspot("", "");
+                    final String startWifitext = "*" + IMEI + ",15," +
+                            (startwifisuccess == true ? 0 : 1) + "#";
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            client.send(startWifitext);
+                        }
+                    }).start();
+                    break;
+                case "85"://关闭WIFI  *终端编号,85#
+                    boolean closewifisuccess = closeWifiHotspot();
+                    final String closeWifitext = "*" + IMEI + ",16," +
+                            (closewifisuccess == true ? 0 : 1) + "#";
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            client.send(closeWifitext);
+                        }
+                    }).start();
+                    break;
+                case "84"://修改热点连接用户名  *终端编号,84,用户名#
 
+                    if (types.length == 3) {
+                        String username = types[2];
+                        SPUtils.put(MainActivity.this, "wifiname", types[2]);
+                        closeWifiHotspot();
+                        boolean updatewifisuccess = createWifiHotspot(username, "");
+                        final String updateWifitext = "*" + IMEI + ",15," +
+                                (updatewifisuccess == true ? 0 : 1) + "#";
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                client.send(updateWifitext);
+                            }
+                        }).start();
                     }
                     break;
                 default:
@@ -803,7 +845,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                      JSONObject mJsonObject = new JSONObject(s);
                                      if (mJsonObject.getBoolean("success")) {
                                          String backurl = mJsonObject.getString("msg");
-                                     //    backurl = backurl.substring(0, backurl.length() - 1);
+                                         //    backurl = backurl.substring(0, backurl.length() - 1);
                                          backurl = "*" + IMEI + ",14," + backurl + "#";
                                          final String url = backurl;
                                          new Thread(
@@ -873,7 +915,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         });
         //    StartRecord();
     }
-
 
 
     /*
@@ -955,6 +996,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         mLocationUtil.stopLocate();
     }
+
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
       /*  if (keyCode == KeyEvent.KEYCODE_BACK) {
@@ -964,39 +1006,42 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return super.onKeyDown(keyCode, event);
     }
 
-    private void SendCommonReply(final String zlbh){
+    private void SendCommonReply(final String zlbh) {
 
         new Thread(
                 new Runnable() {
                     @Override
                     public void run() {
-                        String url = "*"+IMEI+",0,"+zlbh+"#";
+                        String url = "*" + IMEI + ",0," + zlbh + "#";
                         client.send(url);
                     }
                 }
         ).start();
 
     }
+
     public static long getTimesMonthMorning() {
         Calendar cal = Calendar.getInstance();
         cal.set(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH), 0, 0, 0);
         cal.set(Calendar.DAY_OF_MONTH, cal.getActualMinimum(Calendar.DAY_OF_MONTH));
         return cal.getTimeInMillis();
     }
+
     private boolean hasPermissionToReadNetworkStats() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return true;
         }
         final AppOpsManager appOps = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
         int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
-                android.os.Process.myUid(), getPackageName());
+                Process.myUid(), getPackageName());
         if (mode == AppOpsManager.MODE_ALLOWED) {
             return true;
         }
 
-     //   requestReadNetworkStats();
+        //   requestReadNetworkStats();
         return false;
     }
+
     // 打开“有权查看使用情况的应用”页面
     private void requestReadNetworkStats() {
         Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);

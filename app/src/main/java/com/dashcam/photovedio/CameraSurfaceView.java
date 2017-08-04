@@ -74,16 +74,18 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     private void init(Context context) {
         this.context = context;
         videoDb = new DriveVideoDbHelper(context);
-        rootPath= FileUtil.getStoragePath(context,false);
-      /*  if (rootPath.equals("")||rootPath==null){
+        rootPath= FileUtil.getStoragePath(context,true);
+        if (rootPath.equals("")||rootPath==null){
             rootPath= FileUtil.getStoragePath(context,false);
-        }*/
-        cameraState = CameraState.START;
-        File mDirFile = new File(COMPRESSOR_DIR);
-        if (!mDirFile.exists()) {
-            mDirFile.mkdirs();
         }
-        mCompressor = new Compressor.Builder(context).setQuality(90).setDestinationDirectoryPath(COMPRESSOR_DIR).build();
+        cameraState = CameraState.START;
+        String photopath =rootPath+ File.separator  + "photo" + File.separator + "photomini" + File.separator;
+        File mDirFile = new File(photopath);
+        boolean success = false;
+        if (!mDirFile.exists()) {
+            success= mDirFile.mkdirs();
+        }
+        mCompressor = new Compressor.Builder(context).setQuality(90).setDestinationDirectoryPath(photopath).build();
         if (cameraStateListener != null) {
             cameraStateListener.onCameraStateChange(cameraState);
         }
@@ -465,9 +467,9 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
         mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-        mediaRecorder.setVideoSize(1280,720);
-        mediaRecorder.setVideoFrameRate(20);
-        mediaRecorder.setVideoEncodingBitRate(1 * 1024 * 1024);
+        mediaRecorder.setVideoSize(1920,1080);
+        mediaRecorder.setVideoFrameRate(10);
+        mediaRecorder.setVideoEncodingBitRate(1 * 512 * 1024);
         if (mOpenBackCamera) {
             mediaRecorder.setOrientationHint(90);
         } else {

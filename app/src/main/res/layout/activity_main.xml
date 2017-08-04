@@ -18,5 +18,12 @@
         android:id="@+id/cameraSurfaceView"
         android:layout_width="1dp"
         android:layout_height="1dp" />
+    <TextView
+        android:id="@+id/liuliang"
+        android:layout_width="match_parent"
+        android:layout_height="45dp"
+        android:gravity="center"
+        android:text="行车记录仪"
+        android:textColor="@android:color/background_dark" />
 
 </LinearLayout>
