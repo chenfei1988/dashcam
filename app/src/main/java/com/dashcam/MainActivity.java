@@ -100,7 +100,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     /**
      * 热点名称
      */
-    private static final String WIFI_HOTSPOT_SSID = "JIJJMA-";
+    private static final String WIFI_HOTSPOT_SSID = "XiaoMa-";
     private DriveVideoDbHelper videoDb;
     private SmsReceiver smsReceiver;
     private AudioManager audioMgr = null; // Audio管理器，用了控制音量
@@ -112,12 +112,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     MediaPlayer mediaPlayer;
     private SensorManager mSensorManager;
     private Sensor mSensor;
-    private static final String DEFAULT_FILE_PATH = Environment.getExternalStorageDirectory() + "/vedio/";
+    private   String DEFAULT_FILE_PATH =  "";
     private VideoServer mVideoServer;
     private MyBroadcastReceiver myBroadcastReceiver = new MyBroadcastReceiver();
     private boolean IsCharge = false;//是否充电
+    private boolean IsCarStop = false;//超过5分钟静止
+    private boolean IsXiumian = false;//是否是休眠状态
     LocationUtil mLocationUtil;
-
+    private String rootPath ="";//存放视频的路径
     @Override
     public void onReceiveLocation(BDLocation location) {
         if (location != null) {
@@ -144,10 +146,28 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 case 2:
                     Calendar mCalendar = Calendar.getInstance();
                     long timestamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
-                    if (timestamp - lastaccelerometertimestamp > 300 && IsCharge == false) {
-
+                    if (timestamp - lastaccelerometertimestamp > 300){
+                        IsCarStop = true;
+                    }
+                    else{
+                        IsCarStop = false;
+                    }
+                    if (IsCarStop==true&&IsCharge == false) {
+                        IsXiumian = true;
                         IsStopRecord = true;
                         cameraSurfaceView.stopRecord();
+                        PlayMusic(MainActivity.this,2);
+                        final String xiumiantext = "*" + IMEI + ",18,"
+                                + 0 + "#";
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                client.send(xiumiantext);
+                            }
+                        }).start();
+                    }
+                    else{
+                        IsXiumian = false;
                     }
                     break;
                 case 3:
@@ -192,12 +212,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
         EventBus.getDefault().register(this);
+        context = this;
         initData();
         initViews();
-        context = this;
         registerReceiver(mbatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         BindReceiver();
-        setBrightnessMode();//开启Wifi
+      //  setBrightnessMode();//开启Wifi
 
     }
 
@@ -207,7 +227,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (hasPermissionToReadNetworkStats()) {
             NetworkStatsManager networkStatsManager = (NetworkStatsManager) getSystemService(NETWORK_STATS_SERVICE);
             NetworkStats.Bucket bucket = null;
-// 获取到目前为止设备的Wi-Fi流量统计
+      // 获取到目前为止设备的Wi-Fi流量统计
             try {
                 bucket = networkStatsManager.querySummaryForDevice(ConnectivityManager.TYPE_WIFI, "", 0, System.currentTimeMillis());
             } catch (RemoteException e) {
@@ -216,7 +236,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             liuliang.setText(bucket.getRxBytes() + bucket.getTxBytes()+"B");
         }
 
-
+        rootPath = FileUtil.getStoragePath(this,true);
+        if (rootPath==null){
+            rootPath= FileUtil.getStoragePath(context,false);
+        }
+        DEFAULT_FILE_PATH =rootPath+"/vedio/";
         mLocationUtil = new LocationUtil(this, this);
         mLocationUtil.startLocate();
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
@@ -477,10 +501,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
      */
     private boolean deleteOldestUnlockVideo() {
         try {
-            String sdcardPath = FileUtil.getSDPath();
+
             // sharedPreferences.getString("sdcardPath","/mnt/sdcard2");
-            float sdFree = FileUtil.getSDAvailableSize(sdcardPath);
-            float sdTotal = FileUtil.getSDTotalSize(sdcardPath);
+            float sdFree = FileUtil.getSDAvailableSize(rootPath);
+            float sdTotal = FileUtil.getSDTotalSize(rootPath);
             int intSdFree = (int) sdFree;
 
             while (sdFree < sdTotal * 0.2
@@ -490,7 +514,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 if (oldestUnlockVideoId != -1) {
                     String oldestUnlockVideoName = videoDb
                             .getVideNameById(oldestUnlockVideoId);
-                    File f = new File(sdcardPath + "/vedio"
+                    File f = new File(rootPath + "/vedio"
                             + File.separator + oldestUnlockVideoName + ".mp4");
                     if (f.exists() && f.isFile()) {
                         int i = 0;
@@ -509,8 +533,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                          * 1：升级时选Download的话，不会清理USB存储空间，应用数据库被删除； 2：应用被清除数据
                          * 这种情况下旧视频无法直接删除， 此时如果满存储，需要直接删除
                          */
-                        File file = new File(sdcardPath + "/vedio/");
-                        sdFree = FileUtil.getSDAvailableSize(sdcardPath);
+                        File file = new File(rootPath + "/vedio/");
+                        sdFree = FileUtil.getSDAvailableSize(rootPath);
                         intSdFree = (int) sdFree;
                         if (sdFree < sdTotal
                                 * 0.2
@@ -531,7 +555,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         myHandler.sendMessage(message);
                         String oldestVideoName = videoDb
                                 .getVideNameById(oldestVideoId);
-                        File f = new File(sdcardPath + "/vedio"
+                        File f = new File(rootPath + "/vedio"
                                 + File.separator + oldestVideoName + ".mp4");
                         if (f.exists() && f.isFile()) {
 
@@ -545,7 +569,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     }
                 }
                 // 更新剩余空间
-                sdFree = FileUtil.getSDAvailableSize(sdcardPath);
+                sdFree = FileUtil.getSDAvailableSize(rootPath);
                 intSdFree = (int) sdFree;
             }
             return true;
@@ -878,7 +902,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
-    public void PlayMusic(Context mcontext, int type) {  //0 day 1 night
+    public void PlayMusic(Context mcontext, final int type) {  //0 day 1 night
         mediaPlayer = new MediaPlayer();
         switch (type) {
             case 0:
@@ -886,6 +910,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 break;
             case 1:
                 mediaPlayer = MediaPlayer.create(mcontext, R.raw.night);
+                break;
+            case 2:
+                mediaPlayer = MediaPlayer.create(mcontext, R.raw.xiumian);
                 break;
             default:
                 mediaPlayer = MediaPlayer.create(mcontext, R.raw.day);
@@ -910,7 +937,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public void onCompletion(MediaPlayer mp) {
                 // 在播放完毕被回调
-                StartRecord();
+                if (type==2){
+                }
+                else {
+                    StartRecord();
+                }
             }
         });
         //    StartRecord();
@@ -927,9 +958,28 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 int status = intent.getIntExtra("status", BatteryManager.BATTERY_STATUS_UNKNOWN);
                 if (status == BatteryManager.BATTERY_STATUS_CHARGING) {
                     IsCharge = true;
+                    if (IsXiumian == true){
+                        IsCarStop =false;
+                        IsXiumian=false;
+                        final String xiumiantext = "*" + IMEI + ",18,"
+                                + 1 + "#";
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                client.send(xiumiantext);
+                            }
+                        }).start();
+                        if (IsStopRecord==true){
+                            IsStopRecord = false;
+                            StartRecord();
+                        }
+                    }
+                    //唤醒休眠
+                    Toast.makeText(MainActivity.this,"正在充电",Toast.LENGTH_LONG);
+                } else {
+                    IsCharge = false;
+                    Toast.makeText(MainActivity.this,"停止充电",Toast.LENGTH_LONG);
                 }
-            } else {
-                IsCharge = false;
             }
         }
     };
@@ -953,10 +1003,25 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             int py = Math.abs(mY - y);
             int pz = Math.abs(mZ - z);
             maxvalue = FileUtil.getMaxValue(px, py, pz);
-            if (maxvalue > 2) {
+            if (maxvalue > 3) {
                 lastaccelerometertimestamp = stamp;
-            } else {
-
+                //唤醒休眠
+                IsCarStop = false;
+                if (IsXiumian ==true) {
+                    IsXiumian = false;
+                    final String xiumiantext = "*" + IMEI + ",18,"
+                            + 1 + "#";
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            client.send(xiumiantext);
+                        }
+                    }).start();
+                    if (IsStopRecord == true) {
+                        IsStopRecord = false;
+                        StartRecord();
+                    }
+                }
             }
             mX = x;
             mY = y;

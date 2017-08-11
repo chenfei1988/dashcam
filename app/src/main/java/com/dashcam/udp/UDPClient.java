@@ -23,7 +23,7 @@ public class UDPClient implements Runnable {
     //final static int udpPort = 3001;
     final static int udpPort = 9999;
     final static String hostIp = "139.129.193.52";
-   // final static String hostIp = "192.168.43.22";
+   // final static String hostIp = "192.168.1.100";
     private static DatagramSocket socket = null;
     private static DatagramPacket packetSend,packetRcv;
     private boolean udpLife = true; //udp生命线程

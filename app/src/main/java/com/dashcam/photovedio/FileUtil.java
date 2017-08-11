@@ -71,20 +71,7 @@ public class FileUtil {
         return blockSize * availableBlocks / 1024 / 1024;
     }
 
-    /**
-     * 返回sdk路径
-     *
-     * @return
-     */
-    public static String getSDPath() {
-        File sdDir = null;
-        boolean sdCardExist = Environment.getExternalStorageState()
-                .equals(android.os.Environment.MEDIA_MOUNTED); //判断sd卡是否存在
-        if (sdCardExist) {
-            sdDir = Environment.getExternalStorageDirectory();//获取跟目录
-        }
-        return sdDir.toString();
-    }
+
 
     /**
      * 直接调用短信接口发短信

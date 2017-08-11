@@ -54,7 +54,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     Compressor mCompressor;
     private DriveVideoDbHelper videoDb ;
     private DriveVideo driveVideo;
-    public static String COMPRESSOR_DIR = Environment.getExternalStorageDirectory() + File.separator  + "photo" + File.separator + "photomini" + File.separator;
+    //public static String COMPRESSOR_DIR = Environment.getExternalStorageDirectory() + File.separator  + "photo" + File.separator + "photomini" + File.separator;
     private String rootPath ="";
     public CameraSurfaceView(Context context) {
         super(context);
