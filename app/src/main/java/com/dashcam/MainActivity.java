@@ -41,6 +41,8 @@ import com.baidu.location.BDLocationListener;
 import com.dashcam.base.ApiInterface;
 import com.dashcam.base.DateUtils;
 import com.dashcam.base.MacUtils;
+import com.dashcam.base.MyAPP;
+import com.dashcam.base.PhoneInfoUtils;
 import com.dashcam.base.RefreshEvent;
 import com.dashcam.base.SPUtils;
 import com.dashcam.httpservers.VideoServer;
@@ -112,14 +114,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     MediaPlayer mediaPlayer;
     private SensorManager mSensorManager;
     private Sensor mSensor;
-    private   String DEFAULT_FILE_PATH =  "";
+    private String DEFAULT_FILE_PATH = "";
     private VideoServer mVideoServer;
     private MyBroadcastReceiver myBroadcastReceiver = new MyBroadcastReceiver();
     private boolean IsCharge = false;//是否充电
     private boolean IsCarStop = false;//超过5分钟静止
     private boolean IsXiumian = false;//是否是休眠状态
     LocationUtil mLocationUtil;
-    private String rootPath ="";//存放视频的路径
+    private String rootPath = "";//存放视频的路径
+    int Batterylevel = 100;//电池电量
+    private String phonenumber = "";
+    private String G4Itedbm = "";//4G信号强弱
+    private boolean IsBackCamera = true;
+    public static boolean IsZhualu = false;//是否在抓录视频
+    private boolean IsFirstXiumian = false;
+
     @Override
     public void onReceiveLocation(BDLocation location) {
         if (location != null) {
@@ -146,27 +155,28 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 case 2:
                     Calendar mCalendar = Calendar.getInstance();
                     long timestamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
-                    if (timestamp - lastaccelerometertimestamp > 300){
+                    if (timestamp - lastaccelerometertimestamp > 100) {
                         IsCarStop = true;
-                    }
-                    else{
+                    } else {
                         IsCarStop = false;
                     }
-                    if (IsCarStop==true&&IsCharge == false) {
-                        IsXiumian = true;
-                        IsStopRecord = true;
-                        cameraSurfaceView.stopRecord();
-                        PlayMusic(MainActivity.this,2);
-                        final String xiumiantext = "*" + IMEI + ",18,"
-                                + 0 + "#";
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                client.send(xiumiantext);
-                            }
-                        }).start();
-                    }
-                    else{
+                    if (IsCarStop == true && IsCharge == false) {
+                        if (!IsFirstXiumian) {
+                            IsFirstXiumian = true;
+                            IsXiumian = true;
+                            IsStopRecord = true;
+                            cameraSurfaceView.stopRecord();
+                            PlayMusic(MainActivity.this, 2);
+                            final String xiumiantext = "*" + IMEI + ",18,"
+                                    + 0 + "#";
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    client.send(xiumiantext);
+                                }
+                            }).start();
+                        }
+                    } else {
                         IsXiumian = false;
                     }
                     break;
@@ -189,7 +199,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 case 9:
                     cameraSurfaceView.stopRecord();
                     //   new clearTFCardethread().start();
-                    if (!IsStopRecord) {
+                    if (!IsStopRecord && IsBackCamera&&!IsZhualu) { //不停止录像并且是后置摄像头，因为抓录前置摄像头时只用录像一次
                         StartRecord();
                     }
                     break;
@@ -217,7 +227,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         initViews();
         registerReceiver(mbatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         BindReceiver();
-      //  setBrightnessMode();//开启Wifi
+        //  setBrightnessMode();//开启Wifi
 
     }
 
@@ -227,20 +237,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (hasPermissionToReadNetworkStats()) {
             NetworkStatsManager networkStatsManager = (NetworkStatsManager) getSystemService(NETWORK_STATS_SERVICE);
             NetworkStats.Bucket bucket = null;
-      // 获取到目前为止设备的Wi-Fi流量统计
+            // 获取到目前为止设备的Wi-Fi流量统计
             try {
                 bucket = networkStatsManager.querySummaryForDevice(ConnectivityManager.TYPE_WIFI, "", 0, System.currentTimeMillis());
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
-            liuliang.setText(bucket.getRxBytes() + bucket.getTxBytes()+"B");
+            liuliang.setText(bucket.getRxBytes() + bucket.getTxBytes() + "B");
         }
-
-        rootPath = FileUtil.getStoragePath(this,true);
-        if (rootPath==null){
-            rootPath= FileUtil.getStoragePath(context,false);
+        phonenumber = new PhoneInfoUtils(context).getNativePhoneNumber();
+        FileUtil.getCurrentNetDBM(MainActivity.this);
+        rootPath = FileUtil.getStoragePath(this, true);
+        if (rootPath == null) {
+            rootPath = FileUtil.getStoragePath(context, false);
         }
-        DEFAULT_FILE_PATH =rootPath+"/vedio/";
+        DEFAULT_FILE_PATH = rootPath + "/vedio/";
         mLocationUtil = new LocationUtil(this, this);
         mLocationUtil.startLocate();
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
@@ -308,89 +319,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return ID;
     }
 
-    /**
-     * 创建Wifi热点
-     */
-    private boolean createWifiHotspot(String name, String password) {
-        if (wifiManager.isWifiEnabled()) {
-            //如果wifi处于打开状态，则关闭wifi,
-            wifiManager.setWifiEnabled(false);
-        }
-        WifiConfiguration config = new WifiConfiguration();
-        if (name.equals("")) {
-            name = (String) SPUtils.get(MainActivity.this, "wifiname", WIFI_HOTSPOT_SSID + MacUtils.getMacAddr());
-        }
-        config.SSID = name;
-        if (password.equals("")) {
-            password = (String) SPUtils.get(MainActivity.this, "wifipassword", "12345678");
-        }
-        config.preSharedKey = password;
-        config.hiddenSSID = true;
-        config.allowedAuthAlgorithms
-                .set(WifiConfiguration.AuthAlgorithm.OPEN);//开放系统认证
-        config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP);
-        config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
-        config.allowedPairwiseCiphers
-                .set(WifiConfiguration.PairwiseCipher.TKIP);
-        config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
-        config.allowedPairwiseCiphers
-                .set(WifiConfiguration.PairwiseCipher.CCMP);
-        config.status = WifiConfiguration.Status.ENABLED;
-        try {
-            Method method = wifiManager.getClass().getMethod(
-                    "setWifiApEnabled", WifiConfiguration.class, Boolean.TYPE);
-            boolean enable = (Boolean) method.invoke(wifiManager, config, true);
-            return enable;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-
-        }
-    }
-
-    /**
-     * 关闭WiFi热点
-     */
-    public boolean closeWifiHotspot() {
-        boolean success = true;
-        try {
-            Method method = wifiManager.getClass().getMethod("getWifiApConfiguration");
-            method.setAccessible(true);
-            WifiConfiguration config = (WifiConfiguration) method.invoke(wifiManager);
-            Method method2 = wifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
-            method2.invoke(wifiManager, config, false);
-        } catch (NoSuchMethodException e) {
-            success = false;
-            e.printStackTrace();
-        } catch (IllegalArgumentException e) {
-            success = false;
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            success = false;
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            success = false;
-            e.printStackTrace();
-        }
-        return success;
-    }
-
-    /*
-      开启wifi
-     */
-    private void setBrightnessMode() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (!Settings.System.canWrite(context)) {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
-                intent.setData(Uri.parse("package:" + context.getPackageName()));
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                context.startActivity(intent);
-            } else {
-                //有了权限，具体的动作
-                createWifiHotspot("", "");
-            }
-        }
-    }
 
     /*
     上传GPS位置信息
@@ -417,66 +345,40 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     };
 
-    public void savePicture(String path) {
-        List<File> mList = new ArrayList<>();
-        mList.add(new File(path));
-        OkHttpUtils.post(ApiInterface.savePicture)     // 请求方式和请求url
-                .tag(this)
-                // 请求的 tag, 主要用于取消对应的请求
-                .addFileParams("xczp", mList)
-                .execute(new StringCallback() {
-                             @Override
-                             public void onResponse(boolean isFromCache, String s, Request
-                                     request, @Nullable Response response) {
-                                 try {
-                                     JSONObject mJsonObject = new JSONObject(s);
-                                     if (mJsonObject.getBoolean("success")) {
-                                         String backurl = mJsonObject.getString("msg");
-                                         backurl = "*" + IMEI + ",2," + backurl + "#";
-                                         final String url = backurl;
-                                         new Thread(
-                                                 new Runnable() {
-                                                     @Override
-                                                     public void run() {
-                                                         Message message = Message.obtain();
-                                                         message.what = 1;
-                                                         client.send(url);
-                                                         message.obj = url;
-                                                         myHandler.sendMessage(message);
-                                                     }
-                                                 }
-                                         ).start();
-
-                                     }
-                                 } catch (Exception e) {
-                                     e.printStackTrace();
-                                 }
-                             }
-
-                             @Override
-                             public void onError(boolean isFromCache, Call call, @Nullable Response
-                                     response, @Nullable Exception e) {
-                                 super.onError(isFromCache, call, response, e);
-
-                             }
-                         }
-                );
-
-    }
 
     @Subscribe(threadMode = ThreadMode.BACKGROUND)
     public void onEvnet(RefreshEvent refresh) {
         if (refresh.getYwlx() == 1) {  //上传图片
             savePicture(refresh.getPhotopath());
+            if (!IsBackCamera) {
+                cameraSurfaceView.setDefaultCamera(true);
+                IsBackCamera = true;
+                IsStopRecord = false;
+                StartRecord();
+            }
         } else if (refresh.getYwlx() == 2) { //获取余额
 
             String sendtext = "*" + IMEI + ",6,"
                     + refresh.getPhotopath() + "#";
             client.send(sendtext);
         } else if (refresh.getYwlx() == 3) {   //获取4G信号
-            String sendtext = "*" + IMEI + ",8,"
+            G4Itedbm = refresh.getPhotopath();
+
+         /*   String sendtext = "*" + IMEI + ",8,"
                     + refresh.getPhotopath() + "#";
-            client.send(sendtext);
+            client.send(sendtext);*/
+        } else if (refresh.getYwlx() == 4) {   //抓录视频
+            String vediopath = refresh.getPhotopath();
+            saveFile(vediopath);
+            if (!IsBackCamera) {
+                cameraSurfaceView.setDefaultCamera(true);
+                IsBackCamera = true;
+                IsStopRecord = false;
+                StartRecord();
+            }
+         /*   String sendtext = "*" + IMEI + ",8,"
+                    + refresh.getPhotopath() + "#";
+            client.send(sendtext);*/
         }
     }
 
@@ -495,102 +397,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         registerReceiver(myBroadcastReceiver, intentFilter);
     }
 
-
-    /**
-     * 删除最旧视频
-     */
-    private boolean deleteOldestUnlockVideo() {
-        try {
-
-            // sharedPreferences.getString("sdcardPath","/mnt/sdcard2");
-            float sdFree = FileUtil.getSDAvailableSize(rootPath);
-            float sdTotal = FileUtil.getSDTotalSize(rootPath);
-            int intSdFree = (int) sdFree;
-
-            while (sdFree < sdTotal * 0.2
-                    && intSdFree < 2000) {
-                int oldestUnlockVideoId = videoDb.getOldestUnlockVideoId();
-                // 删除较旧未加锁视频文件
-                if (oldestUnlockVideoId != -1) {
-                    String oldestUnlockVideoName = videoDb
-                            .getVideNameById(oldestUnlockVideoId);
-                    File f = new File(rootPath + "/vedio"
-                            + File.separator + oldestUnlockVideoName + ".mp4");
-                    if (f.exists() && f.isFile()) {
-                        int i = 0;
-                        while (!f.delete() && i < 3) {
-                            i++;
-                        }
-                    }
-                    // 删除数据库记录
-                    videoDb.deleteDriveVideoById(oldestUnlockVideoId);
-                } else {
-                    List<DriveVideo> vedios = videoDb.getAllDriveVideo();
-                    int oldestVideoId = videoDb.getOldestVideoId();
-                    if (oldestVideoId == -1) {
-                        /**
-                         * 有一种情况：数据库中无视频信息。导致的原因：
-                         * 1：升级时选Download的话，不会清理USB存储空间，应用数据库被删除； 2：应用被清除数据
-                         * 这种情况下旧视频无法直接删除， 此时如果满存储，需要直接删除
-                         */
-                        File file = new File(rootPath + "/vedio/");
-                        sdFree = FileUtil.getSDAvailableSize(rootPath);
-                        intSdFree = (int) sdFree;
-                        if (sdFree < sdTotal
-                                * 0.2
-                                || intSdFree < 2000) {
-                            // 此时若空间依然不足,提示用户清理存储（已不是行车视频的原因）
-                            Message message = new Message();
-                            message.what = 5;
-                            myHandler.sendMessage(message);
-                            //      Toast.makeText(MainActivity.this,"存储已满，请手动删除",Toast.LENGTH_SHORT);
-
-                            return false;
-                        }
-                    } else {
-                        // 提示用户清理空间，删除较旧的视频（加锁）
-
-                        Message message = new Message();
-                        message.what = 6;
-                        myHandler.sendMessage(message);
-                        String oldestVideoName = videoDb
-                                .getVideNameById(oldestVideoId);
-                        File f = new File(rootPath + "/vedio"
-                                + File.separator + oldestVideoName + ".mp4");
-                        if (f.exists() && f.isFile()) {
-
-                            int i = 0;
-                            while (!f.delete() && i < 3) {
-                                i++;
-                            }
-                        }
-                        // 删除数据库记录
-                        videoDb.deleteDriveVideoById(oldestVideoId);
-                    }
-                }
-                // 更新剩余空间
-                sdFree = FileUtil.getSDAvailableSize(rootPath);
-                intSdFree = (int) sdFree;
-            }
-            return true;
-        } catch (Exception e) {
-            /*
-             * 异常原因：1.文件由用户手动删除
-             */
-            //    MyLog.e("[MainActivity]deleteOldestUnlockVideo:Catch Exception:"
-            //            + e.toString());
-            e.printStackTrace();
-            return true;
-        }
-    }
-
-    /**
-     * 调整音量
-     */
-    private void adjustVolume() {
-        audioMgr.setStreamVolume(AudioManager.STREAM_MUSIC, curVolume,
-                AudioManager.FLAG_PLAY_SOUND);
-    }
 
     private class MyBroadcastReceiver extends BroadcastReceiver {
 
@@ -616,8 +422,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             SendCommonReply(types[1]);
             switch (types[1]) {
                 case "99":// 微信公众号抓拍的协议，我这边接受服务器的指令，拍照并上传，并把照片路径发送给服务器
-                    cameraSurfaceView.capture();
+                    if (types.length == 3) {
+                        String lushu = types[2];
+                        // (0 前置摄像头,1 后置摄像头)
+                        if (lushu.equals("1")) {
+                            cameraSurfaceView.capture();
+                        } else if (lushu.equals("0")) {
+                            IsStopRecord = true;
+                            cameraSurfaceView.stopRecord();
+                            cameraSurfaceView.setDefaultCamera(false);
+                            IsBackCamera = false;
+                            cameraSurfaceView.capture();
 
+                        }
+                    }
                     break;
                 case "98"://查看热点连接的IP地址列表
                     ArrayList<String> connectedIP = getConnectedIP();
@@ -686,7 +504,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     }
                     break;
                 case "93"://4G信号强度
-                    FileUtil.getCurrentNetDBM(MainActivity.this);
+                    //   FileUtil.getCurrentNetDBM(MainActivity.this);
                     break;
                 case "92"://设备重启
                     PowerManager pManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
@@ -827,6 +645,54 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         }).start();
                     }
                     break;
+                case "82"://.设备状态查询
+                    int connectnum = getConnectedIP().size();//热点连接数
+                    String version = MyAPP.getVersion();
+                    String path = FileUtil.getStoragePath(this, true);
+                    int hasSDk = 0;
+                    if (path == null) {
+                        hasSDk = 1;
+                    }
+                    final String statustext = "*" + IMEI + ",19," +
+                            G4Itedbm + "," + Batterylevel + "," + phonenumber + ","
+                            + connectnum + "," + hasSDk + "," + version + "#";
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            client.send(statustext);
+                        }
+                    }).start();
+                    break;
+                case "81"://当前音量
+                    int current = audioMgr.getStreamVolume(AudioManager.STREAM_VOICE_CALL);
+                    final String currentvolumetext = "*" + IMEI + ",20," +
+                            current + "#";
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            client.send(currentvolumetext);
+                        }
+                    }).start();
+                    break;
+                case "80"://新增视频抓拍协议
+                    if (types.length == 3) {
+                        String lushu = types[2];
+                        // (0 前置摄像头,1 后置摄像头)
+
+                        if (lushu.equals("1")) {
+                            IsZhualu = true;
+                            //  cameraSurfaceView.capture();
+                        } else if (lushu.equals("0")) {
+                            IsStopRecord = true;
+                            cameraSurfaceView.stopRecord();
+                            cameraSurfaceView.setDefaultCamera(false);
+                            IsBackCamera = false;
+                            IsZhualu = true;
+                            StartRecord();
+
+                        }
+                    }
+                    break;
                 default:
                     break;
 
@@ -854,53 +720,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
-    public void saveFile(String path) {
-        List<File> mList = new ArrayList<>();
-        mList.add(new File(path));
-        OkHttpUtils.post(ApiInterface.saveFile)     // 请求方式和请求url
-                .tag(this)
-                // 请求的 tag, 主要用于取消对应的请求
-                .addFileParams("xczp", mList)
-                .execute(new StringCallback() {
-                             @Override
-                             public void onResponse(boolean isFromCache, String s, Request
-                                     request, @Nullable Response response) {
-                                 try {
-                                     JSONObject mJsonObject = new JSONObject(s);
-                                     if (mJsonObject.getBoolean("success")) {
-                                         String backurl = mJsonObject.getString("msg");
-                                         //    backurl = backurl.substring(0, backurl.length() - 1);
-                                         backurl = "*" + IMEI + ",14," + backurl + "#";
-                                         final String url = backurl;
-                                         new Thread(
-                                                 new Runnable() {
-                                                     @Override
-                                                     public void run() {
-                                                         Message message = Message.obtain();
-                                                         message.what = 2;
-                                                         client.send(url);
-                                                         message.obj = url;
-                                                         myHandler.sendMessage(message);
-                                                     }
-                                                 }
-                                         ).start();
-
-                                     }
-                                 } catch (Exception e) {
-                                     e.printStackTrace();
-                                 }
-                             }
-
-                             @Override
-                             public void onError(boolean isFromCache, Call call, @Nullable Response
-                                     response, @Nullable Exception e) {
-                                 super.onError(isFromCache, call, response, e);
-
-                             }
-                         }
-                );
-
-    }
 
     public void PlayMusic(Context mcontext, final int type) {  //0 day 1 night
         mediaPlayer = new MediaPlayer();
@@ -937,9 +756,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public void onCompletion(MediaPlayer mp) {
                 // 在播放完毕被回调
-                if (type==2){
-                }
-                else {
+                if (type == 2) {
+                } else {
                     StartRecord();
                 }
             }
@@ -956,11 +774,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             String action = intent.getAction();
             if (Intent.ACTION_BATTERY_CHANGED.equals(action)) {
                 int status = intent.getIntExtra("status", BatteryManager.BATTERY_STATUS_UNKNOWN);
+                // 电池当前的电量, 它介于0和 EXTRA_SCALE之间
+                Batterylevel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                // 电池电量的最大值
                 if (status == BatteryManager.BATTERY_STATUS_CHARGING) {
                     IsCharge = true;
-                    if (IsXiumian == true){
-                        IsCarStop =false;
-                        IsXiumian=false;
+                    if (IsXiumian == true) {
+                        IsFirstXiumian = false;
+                        IsCarStop = false;
+                        IsXiumian = false;
                         final String xiumiantext = "*" + IMEI + ",18,"
                                 + 1 + "#";
                         new Thread(new Runnable() {
@@ -969,16 +791,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                 client.send(xiumiantext);
                             }
                         }).start();
-                        if (IsStopRecord==true){
+                        if (IsStopRecord == true) {
                             IsStopRecord = false;
                             StartRecord();
                         }
                     }
                     //唤醒休眠
-                    Toast.makeText(MainActivity.this,"正在充电",Toast.LENGTH_LONG);
+                    Toast.makeText(MainActivity.this, "正在充电", Toast.LENGTH_LONG);
                 } else {
                     IsCharge = false;
-                    Toast.makeText(MainActivity.this,"停止充电",Toast.LENGTH_LONG);
+                    Toast.makeText(MainActivity.this, "停止充电", Toast.LENGTH_LONG);
                 }
             }
         }
@@ -1007,7 +829,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 lastaccelerometertimestamp = stamp;
                 //唤醒休眠
                 IsCarStop = false;
-                if (IsXiumian ==true) {
+                if (IsXiumian == true) {
                     IsXiumian = false;
                     final String xiumiantext = "*" + IMEI + ",18,"
                             + 1 + "#";
@@ -1063,12 +885,34 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     @Override
+    public boolean onKeyLongPress(int keyCode, KeyEvent event) {
+        return super.onKeyLongPress(keyCode, event);
+    }
+    @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
       /*  if (keyCode == KeyEvent.KEYCODE_BACK) {
             moveTaskToBack(false);
             return true;
         }*/
+       /* if(keyCode == KeyEvent.KEYCODE_POWER){
+            cameraSurfaceView.capture();
+            cameraSurfaceView.capture();
+            cameraSurfaceView.capture();
+            cameraSurfaceView.capture();
+            cameraSurfaceView.capture();
+            cameraSurfaceView.setDefaultCamera(false);
+            IsBackCamera = false;
+            cameraSurfaceView.capture();
+            cameraSurfaceView.capture();
+            cameraSurfaceView.capture();
+            cameraSurfaceView.capture();
+            cameraSurfaceView.capture();
+            cameraSurfaceView.setDefaultCamera(true);
+            IsBackCamera = true;
+            return true;
+        }*/
         return super.onKeyDown(keyCode, event);
+
     }
 
     private void SendCommonReply(final String zlbh) {
@@ -1083,6 +927,90 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
         ).start();
 
+    }
+
+    /**
+     * 创建Wifi热点
+     */
+    private boolean createWifiHotspot(String name, String password) {
+        if (wifiManager.isWifiEnabled()) {
+            //如果wifi处于打开状态，则关闭wifi,
+            wifiManager.setWifiEnabled(false);
+        }
+        WifiConfiguration config = new WifiConfiguration();
+        if (name.equals("")) {
+            name = (String) SPUtils.get(MainActivity.this, "wifiname", WIFI_HOTSPOT_SSID + MacUtils.getMacAddr());
+        }
+        config.SSID = name;
+        if (password.equals("")) {
+            password = (String) SPUtils.get(MainActivity.this, "wifipassword", "12345678");
+        }
+        config.preSharedKey = password;
+        config.hiddenSSID = true;
+        config.allowedAuthAlgorithms
+                .set(WifiConfiguration.AuthAlgorithm.OPEN);//开放系统认证
+        config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP);
+        config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
+        config.allowedPairwiseCiphers
+                .set(WifiConfiguration.PairwiseCipher.TKIP);
+        config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
+        config.allowedPairwiseCiphers
+                .set(WifiConfiguration.PairwiseCipher.CCMP);
+        config.status = WifiConfiguration.Status.ENABLED;
+        try {
+            Method method = wifiManager.getClass().getMethod(
+                    "setWifiApEnabled", WifiConfiguration.class, Boolean.TYPE);
+            boolean enable = (Boolean) method.invoke(wifiManager, config, true);
+            return enable;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+
+        }
+    }
+
+    /**
+     * 关闭WiFi热点
+     */
+    public boolean closeWifiHotspot() {
+        boolean success = true;
+        try {
+            Method method = wifiManager.getClass().getMethod("getWifiApConfiguration");
+            method.setAccessible(true);
+            WifiConfiguration config = (WifiConfiguration) method.invoke(wifiManager);
+            Method method2 = wifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
+            method2.invoke(wifiManager, config, false);
+        } catch (NoSuchMethodException e) {
+            success = false;
+            e.printStackTrace();
+        } catch (IllegalArgumentException e) {
+            success = false;
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            success = false;
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            success = false;
+            e.printStackTrace();
+        }
+        return success;
+    }
+
+    /*
+      开启wifi
+     */
+    private void setBrightnessMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.System.canWrite(context)) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS);
+                intent.setData(Uri.parse("package:" + context.getPackageName()));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(intent);
+            } else {
+                //有了权限，具体的动作
+                createWifiHotspot("", "");
+            }
+        }
     }
 
     public static long getTimesMonthMorning() {
@@ -1112,5 +1040,226 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
         startActivity(intent);
     }
+
+    /**
+     * 删除最旧视频
+     */
+    private boolean deleteOldestUnlockVideo() {
+        try {
+
+            // sharedPreferences.getString("sdcardPath","/mnt/sdcard2");
+            float sdFree = FileUtil.getSDAvailableSize(rootPath);
+            float sdTotal = FileUtil.getSDTotalSize(rootPath);
+            int intSdFree = (int) sdFree;
+
+            while (sdFree < sdTotal * 0.2
+                    && intSdFree < 2000) {
+                int oldestUnlockVideoId = videoDb.getOldestUnlockVideoId();
+                // 删除较旧未加锁视频文件
+                if (oldestUnlockVideoId != -1) {
+                    String oldestUnlockVideoName = videoDb
+                            .getVideNameById(oldestUnlockVideoId);
+                    File f = new File(rootPath + "/vedio"
+                            + File.separator + oldestUnlockVideoName + ".mp4");
+                    if (f.exists() && f.isFile()) {
+                        int i = 0;
+                        while (!f.delete() && i < 3) {
+                            i++;
+                        }
+                    }
+                    // 删除数据库记录
+                    videoDb.deleteDriveVideoById(oldestUnlockVideoId);
+                } else {
+                    List<DriveVideo> vedios = videoDb.getAllDriveVideo();
+                    int oldestVideoId = videoDb.getOldestVideoId();
+                    if (oldestVideoId == -1) {
+                        /**
+                         * 有一种情况：数据库中无视频信息。导致的原因：
+                         * 1：升级时选Download的话，不会清理USB存储空间，应用数据库被删除； 2：应用被清除数据
+                         * 这种情况下旧视频无法直接删除， 此时如果满存储，需要直接删除
+                         */
+                        File file = new File(rootPath + "/vedio/");
+                        sdFree = FileUtil.getSDAvailableSize(rootPath);
+                        intSdFree = (int) sdFree;
+                        if (sdFree < sdTotal
+                                * 0.2
+                                || intSdFree < 2000) {
+                            // 此时若空间依然不足,提示用户清理存储（已不是行车视频的原因）
+                            Message message = new Message();
+                            message.what = 5;
+                            myHandler.sendMessage(message);
+                            //      Toast.makeText(MainActivity.this,"存储已满，请手动删除",Toast.LENGTH_SHORT);
+
+                            return false;
+                        }
+                    } else {
+                        // 提示用户清理空间，删除较旧的视频（加锁）
+
+                        Message message = new Message();
+                        message.what = 6;
+                        myHandler.sendMessage(message);
+                        String oldestVideoName = videoDb
+                                .getVideNameById(oldestVideoId);
+                        File f = new File(rootPath + "/vedio"
+                                + File.separator + oldestVideoName + ".mp4");
+                        if (f.exists() && f.isFile()) {
+
+                            int i = 0;
+                            while (!f.delete() && i < 3) {
+                                i++;
+                            }
+                        }
+                        // 删除数据库记录
+                        videoDb.deleteDriveVideoById(oldestVideoId);
+                    }
+                }
+                // 更新剩余空间
+                sdFree = FileUtil.getSDAvailableSize(rootPath);
+                intSdFree = (int) sdFree;
+            }
+            return true;
+        } catch (Exception e) {
+            /*
+             * 异常原因：1.文件由用户手动删除
+             */
+            //    MyLog.e("[MainActivity]deleteOldestUnlockVideo:Catch Exception:"
+            //            + e.toString());
+            e.printStackTrace();
+            return true;
+        }
+    }
+
+    /**
+     * 调整音量
+     */
+    private void adjustVolume() {
+        audioMgr.setStreamVolume(AudioManager.STREAM_MUSIC, curVolume,
+                AudioManager.FLAG_PLAY_SOUND);
+    }
+
+    public void saveFile(String path) {
+        List<File> mList = new ArrayList<>();
+        mList.add(new File(path));
+        OkHttpUtils.post(ApiInterface.saveFile)     // 请求方式和请求url
+                .tag(this)
+                // 请求的 tag, 主要用于取消对应的请求
+                .addFileParams("xczp", mList)
+                .execute(new StringCallback() {
+                             @Override
+                             public void onResponse(boolean isFromCache, String s, Request
+                                     request, @Nullable Response response) {
+                                 try {
+
+                                     JSONObject mJsonObject = new JSONObject(s);
+                                     if (mJsonObject.getBoolean("success")) {
+                                         String backurl = mJsonObject.getString("msg");
+                                         //    backurl = backurl.substring(0, backurl.length() - 1);
+                                         if (IsZhualu) {
+                                             IsZhualu = false;
+                                             backurl = "*" + IMEI + ",21," + backurl + "#";
+                                         } else {
+                                             backurl = "*" + IMEI + ",14," + backurl + "#";
+                                         }
+                                         final String url = backurl;
+                                         new Thread(
+                                                 new Runnable() {
+                                                     @Override
+                                                     public void run() {
+                                                         client.send(url);
+                                                        /* Message message = Message.obtain();
+                                                         message.what = 2;
+                                                         message.obj = url;
+                                                         myHandler.sendMessage(message);*/
+                                                     }
+                                                 }
+                                         ).start();
+
+
+                                     }
+                                 } catch (Exception e) {
+                                     e.printStackTrace();
+                                 }
+                             }
+
+                             @Override
+                             public void onError(boolean isFromCache, Call call, @Nullable Response
+                                     response, @Nullable Exception e) {
+                                 String backurl = "";
+                                 if (IsZhualu) {
+                                     IsZhualu = false;
+                                     backurl = "*" + IMEI + ",21," + backurl + "#";
+                                 } else {
+                                     backurl = "*" + IMEI + ",14," + backurl + "#";
+                                 }
+                                 final String url = backurl;
+                                 new Thread(
+                                         new Runnable() {
+                                             @Override
+                                             public void run() {
+                                                 client.send(url);
+                                              /*   Message message = Message.obtain();
+                                                 message.what = 2;
+                                                 client.send(url);
+                                                 message.obj = url;
+                                                 myHandler.sendMessage(message);*/
+                                             }
+                                         }
+                                 ).start();
+                                 super.onError(isFromCache, call, response, e);
+
+                             }
+                         }
+                );
+
+    }
+
+    public void savePicture(String path) {
+        List<File> mList = new ArrayList<>();
+        mList.add(new File(path));
+        OkHttpUtils.post(ApiInterface.savePicture)     // 请求方式和请求url
+                .tag(this)
+                // 请求的 tag, 主要用于取消对应的请求
+                .addFileParams("xczp", mList)
+                .execute(new StringCallback() {
+                             @Override
+                             public void onResponse(boolean isFromCache, String s, Request
+                                     request, @Nullable Response response) {
+                                 try {
+                                     JSONObject mJsonObject = new JSONObject(s);
+                                     if (mJsonObject.getBoolean("success")) {
+                                         String backurl = mJsonObject.getString("msg");
+                                         backurl = "*" + IMEI + ",2," + backurl + "#";
+                                         final String url = backurl;
+                                         new Thread(
+                                                 new Runnable() {
+                                                     @Override
+                                                     public void run() {
+                                                         client.send(url);
+                                                        // Message message = Message.obtain();
+                                                       //  message.what = 1;
+
+                                                       //  message.obj = url;
+                                                     //    myHandler.sendMessage(message);
+                                                     }
+                                                 }
+                                         ).start();
+
+                                     }
+                                 } catch (Exception e) {
+                                     e.printStackTrace();
+                                 }
+                             }
+
+                             @Override
+                             public void onError(boolean isFromCache, Call call, @Nullable Response
+                                     response, @Nullable Exception e) {
+                                 super.onError(isFromCache, call, response, e);
+
+                             }
+                         }
+                );
+
+    }
+
 }
 

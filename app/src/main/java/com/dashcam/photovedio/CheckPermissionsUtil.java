@@ -29,6 +29,7 @@ public class CheckPermissionsUtil {
             Manifest.permission.SEND_SMS,
             Manifest.permission.RECEIVE_SMS,
             Manifest.permission.WRITE_SETTINGS,
+            Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.MOUNT_UNMOUNT_FILESYSTEMS
     };
 

@@ -466,8 +466,10 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+       // mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.MPEG_4_SP);
         mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-        mediaRecorder.setVideoSize(1920,1080);
+        mediaRecorder.setVideoSize(1280,720);
+      //  mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_720P));
         mediaRecorder.setVideoFrameRate(10);
         mediaRecorder.setVideoEncodingBitRate(1 * 512 * 1024);
         if (mOpenBackCamera) {
@@ -518,6 +520,9 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             mediaRecorder.stop();
             isRecording = false;
             Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
+            if (MainActivity.IsZhualu) {
+                EventBus.getDefault().post(new RefreshEvent(4, driveVideo.getPath(), ""));
+            }
             videoDb.addDriveVideo(driveVideo);
         } catch (IllegalStateException e) {
             e.printStackTrace();
