@@ -262,7 +262,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // 初始化音量大概为最大音量的1/2
         curVolume = maxVolume / 2;
         // 每次调整的音量大概为最大音量的1/6
-        stepVolume = maxVolume / 8;
+       // stepVolume = maxVolume / 8;
         Calendar mCalendar = Calendar.getInstance();
         lastaccelerometertimestamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
@@ -664,7 +664,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     }).start();
                     break;
                 case "81"://当前音量
-                    int current = audioMgr.getStreamVolume(AudioManager.STREAM_VOICE_CALL);
+                    int current = audioMgr.getStreamVolume(AudioManager.STREAM_MUSIC);
                     final String currentvolumetext = "*" + IMEI + ",20," +
                             current + "#";
                     new Thread(new Runnable() {
