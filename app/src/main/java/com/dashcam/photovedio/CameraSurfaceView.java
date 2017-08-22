@@ -39,6 +39,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     protected static final int[] VIDEO_480 = {640, 480};
     protected static final int[] VIDEO_720 = {1280, 720};
     protected static final int[] VIDEO_1080 = {1920, 1080};
+    public static int[] VIDEO_SIZE = {1280, 720};
     private int screenOritation = Configuration.ORIENTATION_PORTRAIT;
     private boolean mOpenBackCamera = true;
     private SurfaceHolder mSurfaceHolder;
@@ -468,7 +469,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
        // mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.MPEG_4_SP);
         mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-        mediaRecorder.setVideoSize(1280,720);
+        mediaRecorder.setVideoSize(VIDEO_SIZE[0],VIDEO_SIZE[1]);
       //  mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_720P));
         mediaRecorder.setVideoFrameRate(10);
         mediaRecorder.setVideoEncodingBitRate(1 * 512 * 1024);

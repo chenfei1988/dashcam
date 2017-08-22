@@ -127,7 +127,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private String G4Itedbm = "";//4G信号强弱
     private boolean IsBackCamera = true;
     public static boolean IsZhualu = false;//是否在抓录视频
-    private boolean IsFirstXiumian = false;
 
     @Override
     public void onReceiveLocation(BDLocation location) {
@@ -161,12 +160,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         IsCarStop = false;
                     }
                     if (IsCarStop == true && IsCharge == false) {
-                        if (!IsFirstXiumian) {
-                            IsFirstXiumian = true;
+
                             IsXiumian = true;
                             IsStopRecord = true;
                             cameraSurfaceView.stopRecord();
-                            PlayMusic(MainActivity.this, 2);
+                      //      PlayMusic(MainActivity.this, 2);
                             final String xiumiantext = "*" + IMEI + ",18,"
                                     + 0 + "#";
                             new Thread(new Runnable() {
@@ -176,9 +174,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                 }
                             }).start();
                         }
-                    } else {
-                        IsXiumian = false;
-                    }
                     break;
                 case 3:
                     break;
@@ -479,7 +474,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                     break;
                 case "96"://剩余流量
-
+                    final String sendliuliangtext = "*" + IMEI + ",5,"
+                            + liuliang.getText().toString().trim() + "#";
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            client.send(sendliuliangtext);
+                        }
+                    }).start();
                     break;
                 case "95"://费用查询
                     FileUtil.sendSMS("10086", "cxye");
@@ -693,6 +695,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         }
                     }
                     break;
+                case "79":
+                    if (types.length == 3) {
+                        String lushu = types[2];
+                       // 平台发送  *终端编号,79,类型(1 720*1080P ,2 1080*1920) #
+                        if (lushu.equals("1")) {
+                            CameraSurfaceView.VIDEO_SIZE = new int[]{1280, 720};
+                            //  cameraSurfaceView.capture();
+                        } else if (lushu.equals("2")) {
+
+                            CameraSurfaceView.VIDEO_SIZE = new int[]{1920,1080};
+                        }
+                        final String vediosizetext = "*" + IMEI + ",22," +
+                                lushu + "#";
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                client.send(vediosizetext);
+                            }
+                        }).start();
+                    }
+                    break;
                 default:
                     break;
 
@@ -779,8 +802,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 // 电池电量的最大值
                 if (status == BatteryManager.BATTERY_STATUS_CHARGING) {
                     IsCharge = true;
-                    if (IsXiumian == true) {
-                        IsFirstXiumian = false;
                         IsCarStop = false;
                         IsXiumian = false;
                         final String xiumiantext = "*" + IMEI + ",18,"
@@ -795,7 +816,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                             IsStopRecord = false;
                             StartRecord();
                         }
-                    }
                     //唤醒休眠
                     Toast.makeText(MainActivity.this, "正在充电", Toast.LENGTH_LONG);
                 } else {
