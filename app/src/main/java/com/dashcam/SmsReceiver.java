@@ -40,7 +40,7 @@ public class SmsReceiver extends BroadcastReceiver {
                     content.append(temp.getMessageBody());
                     phoneNumber.append(temp.getOriginatingAddress());
                 }
-
+/*
                // String content = "尊敬的客户，截止到7月17日12时28分，你的话费余额：44.55元，积分：2635。最近一次话费充值";
                 int location1 = content.toString().indexOf("余额：");
                 int location2 = content.toString().indexOf("元，积分");

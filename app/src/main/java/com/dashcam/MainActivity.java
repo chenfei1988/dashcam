@@ -802,6 +802,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private BroadcastReceiver mbatteryReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
+            int temperature=intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE,0);
+            if(temperature>700){
+
+            }
             if (Intent.ACTION_BATTERY_CHANGED.equals(action)) {
                 int status = intent.getIntExtra("status", BatteryManager.BATTERY_STATUS_UNKNOWN);
                 // 电池当前的电量, 它介于0和 EXTRA_SCALE之间

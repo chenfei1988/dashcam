@@ -408,33 +408,33 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     @Override
     public void onAutoFocus(boolean success, Camera camera) {
-        // if (success) {
-        try {
-            mCamera.takePicture(null, null, new Camera.PictureCallback() {
-                @Override
-                public void onPictureTaken(byte[] data, Camera camera) {
-                    Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                    Matrix matrix = new Matrix();
-                    if (mOpenBackCamera) {
-                        matrix.setRotate(90);
-                    } else {
-                        matrix.setRotate(270);
-                        matrix.postScale(-1, 1);
-                    }
+        if (success) {
+            try {
+                mCamera.takePicture(null, null, new Camera.PictureCallback() {
+                    @Override
+                    public void onPictureTaken(byte[] data, Camera camera) {
+                        Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                        Matrix matrix = new Matrix();
+                        if (mOpenBackCamera) {
+                            matrix.setRotate(90);
+                        } else {
+                            matrix.setRotate(270);
+                            matrix.postScale(-1, 1);
+                        }
 
-                    bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-                    String photopath = saveBitmap(bitmap);
-                    EventBus.getDefault().post(new RefreshEvent(1, compressor(photopath), ""));
-                    Toast.makeText(context, "拍照成功", Toast.LENGTH_SHORT).show();
-                    startPreview();
+                        bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+                        String photopath = saveBitmap(bitmap);
+                        EventBus.getDefault().post(new RefreshEvent(1, compressor(photopath), ""));
+                        Toast.makeText(context, "拍照成功", Toast.LENGTH_SHORT).show();
+                        startPreview();
+                    }
+                });
+            } catch (Exception e) {
+                if (isRecording) {
+                    Toast.makeText(context, "请先结束录像", Toast.LENGTH_SHORT).show();
                 }
-            });
-        } catch (Exception e) {
-            if (isRecording) {
-                Toast.makeText(context, "请先结束录像", Toast.LENGTH_SHORT).show();
             }
         }
-        //  }
     }
 
     /**
@@ -470,7 +470,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
         // mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.MPEG_4_SP);
-        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         mediaRecorder.setVideoSize(VIDEO_SIZE[0], VIDEO_SIZE[1]);
         //  mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_720P));
         mediaRecorder.setVideoFrameRate(10);
