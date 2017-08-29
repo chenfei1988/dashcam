@@ -40,6 +40,7 @@ import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
 import com.dashcam.base.ApiInterface;
 import com.dashcam.base.DateUtils;
+import com.dashcam.base.FileInfo;
 import com.dashcam.base.MacUtils;
 import com.dashcam.base.MyAPP;
 import com.dashcam.base.PhoneInfoUtils;
@@ -62,10 +63,14 @@ import org.greenrobot.eventbus.ThreadMode;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileFilter;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -104,7 +109,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
      */
     private static final String WIFI_HOTSPOT_SSID = "XiaoMa-";
     private DriveVideoDbHelper videoDb;
-    private SmsReceiver smsReceiver;
+    //  private SmsReceiver smsReceiver;
     private AudioManager audioMgr = null; // Audio管理器，用了控制音量
     private int maxVolume = 50; // 最大音量值
     private int curVolume = 20; // 当前音量值
@@ -127,11 +132,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private String G4Itedbm = "";//4G信号强弱
     public static boolean IsBackCamera = true;
     public static boolean IsZhualu = false;//是否在抓录视频
+    private boolean IsPengZhuang = false;//是否是碰撞
 
     @Override
     public void onReceiveLocation(BDLocation location) {
         if (location != null) {
-            GPSSTR = location.getLongitude() + "," + location.getLatitude() + "," + location.getSpeed() + "," + location.getDirection();
+            if (location.getLongitude() > 1 && location.getLatitude() > 1) {
+                GPSSTR = location.getLongitude() + "," + location.getLatitude() + "," + location.getSpeed() + "," + location.getDirection();
+            }
             Toast.makeText(MainActivity.this, GPSSTR, Toast.LENGTH_LONG);
             //  textGps.setText(location.getLongitude() + "," + location.getLatitude()+","+location.getSpeed()+","+location.getBearing());
         }
@@ -159,7 +167,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     } else {
                         IsCarStop = false;
                     }
-                    if (IsCarStop == true && IsCharge == false) {
+
+                    /*
+                    休眠由平台控制
+                     */
+                 /*   if (IsCarStop == true && IsCharge == false) {
                         IsXiumian = true;
                         //      IsStopRecord = true;
                         cameraSurfaceView.stopRecord();
@@ -172,7 +184,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                 client.send(xiumiantext);
                             }
                         }).start();
-                    }
+                    }*/
                     break;
                 case 3:
                     break;
@@ -222,6 +234,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         initViews();
         registerReceiver(mbatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         BindReceiver();
+        //   DeleteOldVedioFile();
         //  setBrightnessMode();//开启Wifi
 
     }
@@ -298,10 +311,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             //  timer.schedule(recordtask, 5000, 1000 * 4 * 3);
             timer3.schedule(clearTFtask, 3000, 1000 * 60 * 5);
         }
-        smsReceiver = new SmsReceiver();
+      /*  smsReceiver = new SmsReceiver();
         IntentFilter filter = new IntentFilter("android.provider.Telephony.SMS_RECEIVED");
         filter.setPriority(Integer.MAX_VALUE);
-        registerReceiver(smsReceiver, filter);
+        registerReceiver(smsReceiver, filter);*/
         mVideoServer = new VideoServer(DEFAULT_FILE_PATH);
     }
 
@@ -336,7 +349,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     TimerTask clearTFtask = new TimerTask() {
         @Override
         public void run() {
-            deleteOldestUnlockVideo();
+            DeleteOldVedioFile();
         }
     };
 
@@ -348,8 +361,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             if (!IsBackCamera) {
                 cameraSurfaceView.stopRecord();
                 cameraSurfaceView.setDefaultCamera(true);
+
                 IsBackCamera = true;
-              //  IsStopRecord = false;
+                //  IsStopRecord = false;
                 cameraSurfaceView.startRecord();
             }
         } else if (refresh.getYwlx() == 2) { //获取余额
@@ -370,7 +384,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 cameraSurfaceView.stopRecord();
                 cameraSurfaceView.setDefaultCamera(true);
                 IsBackCamera = true;
-             //   IsStopRecord = false;
+                //   IsStopRecord = false;
                 cameraSurfaceView.startRecord();
             }
          /*   String sendtext = "*" + IMEI + ",8,"
@@ -422,11 +436,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     if (types.length == 3) {
                         String lushu = types[2];
                         // (0 前置摄像头,1 后置摄像头)
-                        if (lushu.equals("1")) {
+                        if (lushu.equals("0")) {
                             cameraSurfaceView.capture();
-                        } else if (lushu.equals("0")) {
-                 //           IsStopRecord = true;
-                       //     cameraSurfaceView.isRecording = false;
+                        } else if (lushu.equals("1")) {
+                            //           IsStopRecord = true;
+                            //     cameraSurfaceView.isRecording = false;
                             cameraSurfaceView.stopRecord();
                             cameraSurfaceView.setDefaultCamera(false);
                             IsBackCamera = false;
@@ -580,7 +594,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     break;
                 case "89":// 关闭录像
                     String recordclosetext = "";
-                  //  IsStopRecord = true;
+                    //  IsStopRecord = true;
                     cameraSurfaceView.stopRecord();
                     recordclosetext = "*" + IMEI + ",12," +
                             +(cameraSurfaceView.isRecording == true ? 1 : 0) + "#";
@@ -616,7 +630,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     }
                     break;
                 case "86"://开启WIFI  *终端编号,86#
-                    closeWifiHotspot();
+                    if (isWifiApOpen(MainActivity.this)) {
+                        closeWifiHotspot();
+                    }
                     boolean startwifisuccess = createWifiHotspot("", "");
                     final String startWifitext = "*" + IMEI + ",15," +
                             (startwifisuccess == true ? 0 : 1) + "#";
@@ -693,7 +709,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                             IsZhualu = true;
                             //  cameraSurfaceView.capture();
                         } else if (lushu.equals("0")) {
-                       //     IsStopRecord = true;
+                            //     IsStopRecord = true;
                             cameraSurfaceView.stopRecord();
                             cameraSurfaceView.setDefaultCamera(false);
                             IsBackCamera = false;
@@ -802,8 +818,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private BroadcastReceiver mbatteryReceiver = new BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            int temperature=intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE,0);
-            if(temperature>700){
+            int temperature = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0);
+            if (temperature > 700) {
 
             }
             if (Intent.ACTION_BATTERY_CHANGED.equals(action)) {
@@ -900,8 +916,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             timer3.cancel();
             timer3 = null;
         }
-     //   IsStopRecord = true;
-        unregisterReceiver(smsReceiver);
+        //   IsStopRecord = true;
+        //  unregisterReceiver(smsReceiver);
         unregisterReceiver(mbatteryReceiver);
         unregisterReceiver(myBroadcastReceiver);
         EventBus.getDefault().unregister(this);
@@ -920,27 +936,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-      /*  if (keyCode == KeyEvent.KEYCODE_BACK) {
+       /* if (keyCode == KeyEvent.KEYCODE_BACK) {
             moveTaskToBack(false);
             return true;
         }*/
-       /* if(keyCode == KeyEvent.KEYCODE_POWER){
+        if (keyCode == KeyEvent.KEYCODE_F11) {
+            IsPengZhuang = true;
             cameraSurfaceView.capture();
             cameraSurfaceView.capture();
             cameraSurfaceView.capture();
             cameraSurfaceView.capture();
             cameraSurfaceView.capture();
+            cameraSurfaceView.stopRecord();
             cameraSurfaceView.setDefaultCamera(false);
-            IsBackCamera = false;
+            //  IsBackCamera = false;
             cameraSurfaceView.capture();
             cameraSurfaceView.capture();
             cameraSurfaceView.capture();
             cameraSurfaceView.capture();
             cameraSurfaceView.capture();
             cameraSurfaceView.setDefaultCamera(true);
-            IsBackCamera = true;
+            cameraSurfaceView.startRecord();
+            // IsBackCamera = true;
+            IsPengZhuang = false;
             return true;
-        }*/
+        }
         return super.onKeyDown(keyCode, event);
 
     }
@@ -967,8 +987,26 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             //如果wifi处于打开状态，则关闭wifi,
             wifiManager.setWifiEnabled(false);
         }
-        WifiConfiguration config = new WifiConfiguration();
-        if (name.equals("")) {
+        try {
+            Method method = wifiManager.getClass().getMethod("getWifiApConfiguration");
+            method.setAccessible(true);
+            WifiConfiguration config = (WifiConfiguration) method.invoke(wifiManager);
+            if (!name.equals("")) {
+                config.SSID = name;
+            }
+            if (!password.equals("")) {
+                config.preSharedKey = password;
+            }
+            Method method2 = wifiManager.getClass().getMethod(
+                    "setWifiApEnabled", WifiConfiguration.class, Boolean.TYPE);
+            boolean enable = (Boolean) method2.invoke(wifiManager, config, true);
+            return enable;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    /*    if (name.equals("")) {
             name = (String) SPUtils.get(MainActivity.this, "wifiname", WIFI_HOTSPOT_SSID + MacUtils.getMacAddr());
         }
         config.SSID = name;
@@ -986,8 +1024,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
         config.allowedPairwiseCiphers
                 .set(WifiConfiguration.PairwiseCipher.CCMP);
-        config.status = WifiConfiguration.Status.ENABLED;
-        try {
+        config.status = WifiConfiguration.Status.ENABLED;*/
+      /*  try {
             Method method = wifiManager.getClass().getMethod(
                     "setWifiApEnabled", WifiConfiguration.class, Boolean.TYPE);
             boolean enable = (Boolean) method.invoke(wifiManager, config, true);
@@ -996,7 +1034,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             e.printStackTrace();
             return false;
 
-        }
+        }*/
     }
 
     /**
@@ -1071,93 +1109,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         startActivity(intent);
     }
 
-    /**
-     * 删除最旧视频
-     */
-    private boolean deleteOldestUnlockVideo() {
-        try {
-
-            // sharedPreferences.getString("sdcardPath","/mnt/sdcard2");
-            float sdFree = FileUtil.getSDAvailableSize(rootPath);
-            float sdTotal = FileUtil.getSDTotalSize(rootPath);
-            int intSdFree = (int) sdFree;
-
-            while (sdFree < sdTotal * 0.2
-                    && intSdFree < 2000) {
-                int oldestUnlockVideoId = videoDb.getOldestUnlockVideoId();
-                // 删除较旧未加锁视频文件
-                if (oldestUnlockVideoId != -1) {
-                    String oldestUnlockVideoName = videoDb
-                            .getVideNameById(oldestUnlockVideoId);
-                    File f = new File(rootPath + "/vedio"
-                            + File.separator + oldestUnlockVideoName + ".mp4");
-                    if (f.exists() && f.isFile()) {
-                        int i = 0;
-                        while (!f.delete() && i < 3) {
-                            i++;
-                        }
-                    }
-                    // 删除数据库记录
-                    videoDb.deleteDriveVideoById(oldestUnlockVideoId);
-                } else {
-                    List<DriveVideo> vedios = videoDb.getAllDriveVideo();
-                    int oldestVideoId = videoDb.getOldestVideoId();
-                    if (oldestVideoId == -1) {
-                        /**
-                         * 有一种情况：数据库中无视频信息。导致的原因：
-                         * 1：升级时选Download的话，不会清理USB存储空间，应用数据库被删除； 2：应用被清除数据
-                         * 这种情况下旧视频无法直接删除， 此时如果满存储，需要直接删除
-                         */
-                        File file = new File(rootPath + "/vedio/");
-                        sdFree = FileUtil.getSDAvailableSize(rootPath);
-                        intSdFree = (int) sdFree;
-                        if (sdFree < sdTotal
-                                * 0.2
-                                || intSdFree < 2000) {
-                            // 此时若空间依然不足,提示用户清理存储（已不是行车视频的原因）
-                            Message message = new Message();
-                            message.what = 5;
-                            myHandler.sendMessage(message);
-                            //      Toast.makeText(MainActivity.this,"存储已满，请手动删除",Toast.LENGTH_SHORT);
-
-                            return false;
-                        }
-                    } else {
-                        // 提示用户清理空间，删除较旧的视频（加锁）
-
-                        Message message = new Message();
-                        message.what = 6;
-                        myHandler.sendMessage(message);
-                        String oldestVideoName = videoDb
-                                .getVideNameById(oldestVideoId);
-                        File f = new File(rootPath + "/vedio"
-                                + File.separator + oldestVideoName + ".mp4");
-                        if (f.exists() && f.isFile()) {
-
-                            int i = 0;
-                            while (!f.delete() && i < 3) {
-                                i++;
-                            }
-                        }
-                        // 删除数据库记录
-                        videoDb.deleteDriveVideoById(oldestVideoId);
-                    }
-                }
-                // 更新剩余空间
-                sdFree = FileUtil.getSDAvailableSize(rootPath);
-                intSdFree = (int) sdFree;
-            }
-            return true;
-        } catch (Exception e) {
-            /*
-             * 异常原因：1.文件由用户手动删除
-             */
-            //    MyLog.e("[MainActivity]deleteOldestUnlockVideo:Catch Exception:"
-            //            + e.toString());
-            e.printStackTrace();
-            return true;
-        }
-    }
 
     /**
      * 调整音量
@@ -1291,5 +1242,187 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
+    public class FileComparator implements Comparator<FileInfo> {
+        public int compare(FileInfo file1, FileInfo file2) {
+            if (file1.lastModified < file2.lastModified) {
+                return -1;
+            } else {
+                return 1;
+            }
+        }
+    }
+
+    public FileFilter fileFilter = new FileFilter() {
+        public boolean accept(File file) {
+            String tmp = file.getName().toLowerCase();
+            if (tmp.endsWith(".mp4")) {
+                return true;
+            }
+            return false;
+        }
+    };
+
+    private void DeleteOldVedioFile() {
+
+        try {
+            // sharedPreferences.getString("sdcardPath","/mnt/sdcard2");
+            float sdFree = FileUtil.getSDAvailableSize(rootPath);
+            float sdTotal = FileUtil.getSDTotalSize(rootPath);
+            int intSdFree = (int) sdFree;
+            if (sdFree < sdTotal * 0.99
+                    && intSdFree < 9000) {
+                DeleteFile();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+    private void DeleteFile() {
+        File fileroot = new File(DEFAULT_FILE_PATH);
+        if (!fileroot.exists()) {
+            return;
+        }
+        //取出文件列表：
+        StringBuilder builder = new StringBuilder();
+        final File[] files = fileroot.listFiles();
+        ArrayList<FileInfo> fileList = new ArrayList<FileInfo>();//将需要的子文件信息存入到FileInfo里面
+        for (int i = 0; i < files.length; i++) {
+            File file = files[i];
+            FileInfo fileInfo = new FileInfo();
+            fileInfo.name = file.getName();
+            fileInfo.path = file.getAbsolutePath();
+            fileInfo.lastModified = file.lastModified();
+            fileList.add(fileInfo);
+        }
+        Collections.sort(fileList, new FileComparator());//通过重写Comparator的实现类FileComparator来
+        if (fileList.size() > 10) {
+            for (int i = 0; i < 10; i++) {
+                File f = new File(fileList.get(i).getPath());
+                if (f.exists() && f.isFile()) {
+                    f.delete();
+                }
+            }
+        }
+    }
+
+    /**
+     * 删除最旧视频 (弃用)
+     */
+    private boolean deleteOldestUnlockVideo() {
+        try {
+
+            // sharedPreferences.getString("sdcardPath","/mnt/sdcard2");
+            float sdFree = FileUtil.getSDAvailableSize(rootPath);
+            float sdTotal = FileUtil.getSDTotalSize(rootPath);
+            int intSdFree = (int) sdFree;
+
+            while (sdFree < sdTotal * 0.2
+                    && intSdFree < 2000) {
+                int oldestUnlockVideoId = videoDb.getOldestUnlockVideoId();
+                // 删除较旧未加锁视频文件
+                if (oldestUnlockVideoId != -1) {
+                    String oldestUnlockVideoName = videoDb
+                            .getVideNameById(oldestUnlockVideoId);
+                    File f = new File(rootPath + "/vedio"
+                            + File.separator + oldestUnlockVideoName + ".mp4");
+                    if (f.exists() && f.isFile()) {
+                        int i = 0;
+                        while (!f.delete() && i < 3) {
+                            i++;
+                        }
+                    }
+                    // 删除数据库记录
+                    videoDb.deleteDriveVideoById(oldestUnlockVideoId);
+                } else {
+                    List<DriveVideo> vedios = videoDb.getAllDriveVideo();
+                    int oldestVideoId = videoDb.getOldestVideoId();
+                    if (oldestVideoId == -1) {
+                        /**
+                         * 有一种情况：数据库中无视频信息。导致的原因：
+                         * 1：升级时选Download的话，不会清理USB存储空间，应用数据库被删除； 2：应用被清除数据
+                         * 这种情况下旧视频无法直接删除， 此时如果满存储，需要直接删除
+                         */
+                        File file = new File(rootPath + "/vedio/");
+                        sdFree = FileUtil.getSDAvailableSize(rootPath);
+                        intSdFree = (int) sdFree;
+                        if (sdFree < sdTotal
+                                * 0.2
+                                || intSdFree < 2000) {
+                            // 此时若空间依然不足,提示用户清理存储（已不是行车视频的原因）
+                            Message message = new Message();
+                            message.what = 5;
+                            myHandler.sendMessage(message);
+                            //      Toast.makeText(MainActivity.this,"存储已满，请手动删除",Toast.LENGTH_SHORT);
+
+                            return false;
+                        }
+                    } else {
+                        // 提示用户清理空间，删除较旧的视频（加锁）
+
+                        Message message = new Message();
+                        message.what = 6;
+                        myHandler.sendMessage(message);
+                        String oldestVideoName = videoDb
+                                .getVideNameById(oldestVideoId);
+                        File f = new File(rootPath + "/vedio"
+                                + File.separator + oldestVideoName + ".mp4");
+                        if (f.exists() && f.isFile()) {
+
+                            int i = 0;
+                            while (!f.delete() && i < 3) {
+                                i++;
+                            }
+                        }
+                        // 删除数据库记录
+                        videoDb.deleteDriveVideoById(oldestVideoId);
+                    }
+                }
+                // 更新剩余空间
+                sdFree = FileUtil.getSDAvailableSize(rootPath);
+                intSdFree = (int) sdFree;
+            }
+            return true;
+        } catch (Exception e) {
+            /*
+             * 异常原因：1.文件由用户手动删除
+             */
+            //    MyLog.e("[MainActivity]deleteOldestUnlockVideo:Catch Exception:"
+            //            + e.toString());
+            e.printStackTrace();
+            return true;
+        }
+    }
+
+    public static boolean isWifiApOpen(Context context) {
+        try {
+            WifiManager manager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+            //通过放射获取 getWifiApState()方法
+            Method method = manager.getClass().getDeclaredMethod("getWifiApState");
+            //调用getWifiApState() ，获取返回值
+            int state = (int) method.invoke(manager);
+            //通过放射获取 WIFI_AP的开启状态属性
+            Field field = manager.getClass().getDeclaredField("WIFI_AP_STATE_ENABLED");
+            //获取属性值
+            int value = (int) field.get(manager);
+            //判断是否开启
+            if (state == value) {
+                return true;
+            } else {
+                return false;
+            }
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }
 

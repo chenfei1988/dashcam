@@ -53,7 +53,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     protected int previewformat = ImageFormat.NV21;
     Context context;
     Compressor mCompressor;
-    private DriveVideoDbHelper videoDb;
+   // private DriveVideoDbHelper videoDb;
     private DriveVideo driveVideo;
     //public static String COMPRESSOR_DIR = Environment.getExternalStorageDirectory() + File.separator  + "photo" + File.separator + "photomini" + File.separator;
     private String rootPath = "";
@@ -75,7 +75,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     private void init(Context context) {
         this.context = context;
-        videoDb = new DriveVideoDbHelper(context);
+    //    videoDb = new DriveVideoDbHelper(context);
         rootPath = FileUtil.getStoragePath(context, true);
         if (rootPath == null) {
             rootPath = FileUtil.getStoragePath(context, false);
@@ -542,7 +542,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             if (MainActivity.IsZhualu) {
                 EventBus.getDefault().post(new RefreshEvent(4, driveVideo.getPath(), ""));
             }
-            videoDb.addDriveVideo(driveVideo);
+          //  videoDb.addDriveVideo(driveVideo);
         } catch (IllegalStateException e) {
             e.printStackTrace();
         }
