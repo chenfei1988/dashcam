@@ -133,7 +133,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public static boolean IsBackCamera = true;
     public static boolean IsZhualu = false;//是否在抓录视频
     private boolean IsPengZhuang = false;//是否是碰撞
-
+    int cishu = 0;//上传3次，不成功退出
     @Override
     public void onReceiveLocation(BDLocation location) {
         if (location != null) {
@@ -705,10 +705,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         String lushu = types[2];
                         // (0 前置摄像头,1 后置摄像头)
 
-                        if (lushu.equals("1")) {
+                        if (lushu.equals("0")) {
                             IsZhualu = true;
                             //  cameraSurfaceView.capture();
-                        } else if (lushu.equals("0")) {
+                        } else if (lushu.equals("1")) {
                             //     IsStopRecord = true;
                             cameraSurfaceView.stopRecord();
                             cameraSurfaceView.setDefaultCamera(false);
@@ -1118,7 +1118,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 AudioManager.FLAG_PLAY_SOUND);
     }
 
-    public void saveFile(String path) {
+    public void saveFile(final String path) {
         List<File> mList = new ArrayList<>();
         mList.add(new File(path));
         OkHttpUtils.post(ApiInterface.saveFile)     // 请求方式和请求url
@@ -1133,6 +1133,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                                      JSONObject mJsonObject = new JSONObject(s);
                                      if (mJsonObject.getBoolean("success")) {
+                                         cishu = 0;
                                          String backurl = mJsonObject.getString("msg");
                                          //    backurl = backurl.substring(0, backurl.length() - 1);
                                          if (IsZhualu) {
@@ -1165,6 +1166,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                              @Override
                              public void onError(boolean isFromCache, Call call, @Nullable Response
                                      response, @Nullable Exception e) {
+                                 if (cishu<3) {
+                                     saveFile(path);
+                                 }
                                /*  String backurl = "";
                                  if (IsZhualu) {
                                      IsZhualu = false;
@@ -1194,7 +1198,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     }
 
-    public void savePicture(String path) {
+    public void savePicture(final String path) {
         List<File> mList = new ArrayList<>();
         mList.add(new File(path));
         OkHttpUtils.post(ApiInterface.savePicture)     // 请求方式和请求url
@@ -1208,6 +1212,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                  try {
                                      JSONObject mJsonObject = new JSONObject(s);
                                      if (mJsonObject.getBoolean("success")) {
+                                         cishu =0;
                                          String backurl = mJsonObject.getString("msg");
                                          backurl = "*" + IMEI + ",2," + backurl + "#";
                                          final String url = backurl;
@@ -1234,6 +1239,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                              @Override
                              public void onError(boolean isFromCache, Call call, @Nullable Response
                                      response, @Nullable Exception e) {
+                                 cishu=cishu+1;
+                                 if (cishu<3) {
+                                     savePicture(path);
+                                 }
                                  super.onError(isFromCache, call, response, e);
 
                              }
@@ -1269,8 +1278,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             float sdFree = FileUtil.getSDAvailableSize(rootPath);
             float sdTotal = FileUtil.getSDTotalSize(rootPath);
             int intSdFree = (int) sdFree;
-            if (sdFree < sdTotal * 0.99
-                    && intSdFree < 9000) {
+            if (sdFree < sdTotal * 0.2
+                    && intSdFree < 2000) {
                 DeleteFile();
             }
         } catch (Exception e) {

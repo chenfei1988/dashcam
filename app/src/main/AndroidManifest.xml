@@ -45,7 +45,10 @@
             android:name="com.baidu.location.f"
             android:enabled="true"
             android:process=":remote" />
-        <activity android:name=".MainActivity">
+        <activity android:name=".MainActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:exported="true"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

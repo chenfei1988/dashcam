@@ -33,7 +33,8 @@ import id.zelory.compressor.Compressor;
 
 import static android.hardware.Camera.Parameters.FOCUS_MODE_AUTO;
 
-public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Callback, Camera.AutoFocusCallback, View.OnClickListener {
+public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Callback,
+         View.OnClickListener {
 
     protected static final int[] VIDEO_320 = {320, 240};
     protected static final int[] VIDEO_480 = {640, 480};
@@ -282,7 +283,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         try {
             String mode = mCamera.getParameters().getFocusMode();
             if (("auto".equals(mode)) || ("macro".equals(mode))) {
-                mCamera.autoFocus(null);
+               // mCamera.autoFocus(null);
             }
         } catch (Exception e) {
         }
@@ -311,7 +312,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     @Override
     public void onClick(View v) {
         if (mCamera != null) {
-            mCamera.autoFocus(null);
+           // mCamera.autoFocus(null);
         }
     }
 
@@ -403,39 +404,39 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             Toast.makeText(context, "请插入存储卡", Toast.LENGTH_SHORT).show();
             return;
         }
-        mCamera.autoFocus(this);
-    }
-
-    @Override
-    public void onAutoFocus(boolean success, Camera camera) {
-        if (success) {
-            try {
-                mCamera.takePicture(null, null, new Camera.PictureCallback() {
-                    @Override
-                    public void onPictureTaken(byte[] data, Camera camera) {
-                        Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                        Matrix matrix = new Matrix();
-                        if (mOpenBackCamera) {
-                            matrix.setRotate(90);
-                        } else {
-                            matrix.setRotate(270);
-                            matrix.postScale(-1, 1);
-                        }
-
-                        bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-                        String photopath = saveBitmap(bitmap);
-                        EventBus.getDefault().post(new RefreshEvent(1, compressor(photopath), ""));
-                        Toast.makeText(context, "拍照成功", Toast.LENGTH_SHORT).show();
-                        startPreview();
+        try {
+            mCamera.takePicture(null, null, new Camera.PictureCallback() {
+                @Override
+                public void onPictureTaken(byte[] data, Camera camera) {
+                    Toast.makeText(context, "拍照成功111", Toast.LENGTH_SHORT).show();
+                    Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                    Matrix matrix = new Matrix();
+                    if (mOpenBackCamera) {
+                        matrix.setRotate(90);
+                    } else {
+                        matrix.setRotate(270);
+                        matrix.postScale(-1, 1);
                     }
-                });
-            } catch (Exception e) {
-                if (isRecording) {
-                    Toast.makeText(context, "请先结束录像", Toast.LENGTH_SHORT).show();
+
+                    bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+                    String photopath = saveBitmap(bitmap);
+                    EventBus.getDefault().post(new RefreshEvent(1, compressor(photopath), ""));
+                    Toast.makeText(context, "拍照成功", Toast.LENGTH_SHORT).show();
+                    startPreview();
                 }
+            });
+        } catch (Exception e) {
+            if (isRecording) {
+                Toast.makeText(context, "请先结束录像", Toast.LENGTH_SHORT).show();
             }
         }
+       // mCamera.autoFocus(this);
     }
+
+   /* @Override
+    public void onAutoFocus(boolean success, Camera camera) {
+
+    }*/
 
     /**
      * ___________________________________以下为视频录制模块______________________________________
