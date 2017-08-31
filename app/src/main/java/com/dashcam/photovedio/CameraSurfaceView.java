@@ -33,8 +33,7 @@ import id.zelory.compressor.Compressor;
 
 import static android.hardware.Camera.Parameters.FOCUS_MODE_AUTO;
 
-public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Callback,
-         View.OnClickListener {
+public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Callback, Camera.AutoFocusCallback, View.OnClickListener {
 
     protected static final int[] VIDEO_320 = {320, 240};
     protected static final int[] VIDEO_480 = {640, 480};
@@ -54,8 +53,8 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     protected int previewformat = ImageFormat.NV21;
     Context context;
     Compressor mCompressor;
-   // private DriveVideoDbHelper videoDb;
-    private DriveVideo driveVideo;
+    private String currentVediopah = "";
+  //  private DriveVideo driveVideo;
     //public static String COMPRESSOR_DIR = Environment.getExternalStorageDirectory() + File.separator  + "photo" + File.separator + "photomini" + File.separator;
     private String rootPath = "";
 
@@ -76,13 +75,12 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     private void init(Context context) {
         this.context = context;
-    //    videoDb = new DriveVideoDbHelper(context);
         rootPath = FileUtil.getStoragePath(context, true);
         if (rootPath == null) {
             rootPath = FileUtil.getStoragePath(context, false);
         }
         cameraState = CameraState.START;
-        String photopath = rootPath + File.separator + "photo" + File.separator + "photomini" + File.separator;
+        String photopath = rootPath + File.separator + "photomini" + File.separator;
         File mDirFile = new File(photopath);
         boolean success = false;
         if (!mDirFile.exists()) {
@@ -117,7 +115,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         isAttachedWindow = true;
     }
 
-    private void openCamera() {
+    public void openCamera() {
         if (mOpenBackCamera) {
             mCameraId = findCamera(false);
         } else {
@@ -283,7 +281,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         try {
             String mode = mCamera.getParameters().getFocusMode();
             if (("auto".equals(mode)) || ("macro".equals(mode))) {
-               // mCamera.autoFocus(null);
+                mCamera.autoFocus(null);
             }
         } catch (Exception e) {
         }
@@ -312,7 +310,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     @Override
     public void onClick(View v) {
         if (mCamera != null) {
-           // mCamera.autoFocus(null);
+            mCamera.autoFocus(null);
         }
     }
 
@@ -400,15 +398,15 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
      **/
     public void capture() {
         if (mCamera == null) return;
-        if (!isExternalStorageWritable()) {
-            Toast.makeText(context, "请插入存储卡", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        mCamera.autoFocus(this);
+    }
+
+    @Override
+    public void onAutoFocus(boolean success, Camera camera) {
         try {
             mCamera.takePicture(null, null, new Camera.PictureCallback() {
                 @Override
                 public void onPictureTaken(byte[] data, Camera camera) {
-                    Toast.makeText(context, "拍照成功111", Toast.LENGTH_SHORT).show();
                     Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
                     Matrix matrix = new Matrix();
                     if (mOpenBackCamera) {
@@ -417,12 +415,12 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                         matrix.setRotate(270);
                         matrix.postScale(-1, 1);
                     }
-
                     bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
                     String photopath = saveBitmap(bitmap);
                     EventBus.getDefault().post(new RefreshEvent(1, compressor(photopath), ""));
                     Toast.makeText(context, "拍照成功", Toast.LENGTH_SHORT).show();
                     startPreview();
+
                 }
             });
         } catch (Exception e) {
@@ -430,21 +428,14 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 Toast.makeText(context, "请先结束录像", Toast.LENGTH_SHORT).show();
             }
         }
-       // mCamera.autoFocus(this);
     }
 
-   /* @Override
-    public void onAutoFocus(boolean success, Camera camera) {
-
-    }*/
 
     /**
      * ___________________________________以下为视频录制模块______________________________________
      **/
     MediaRecorder mediaRecorder = new MediaRecorder();
     public boolean isRecording = false;
-    private int quality = CamcorderProfile.QUALITY_480P;
-
     public boolean isRecording() {
         return isRecording;
     }
@@ -455,10 +446,6 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     public boolean startRecord(int maxDurationMs, MediaRecorder.OnInfoListener onInfoListener) {
         if (mCamera == null) return false;
-        if (!isExternalStorageWritable()) {
-            Toast.makeText(context, "请插入存储卡", Toast.LENGTH_SHORT).show();
-            return false;
-        }
 
         mCamera.unlock();
         mediaRecorder.reset();
@@ -470,7 +457,6 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-        // mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.MPEG_4_SP);
         mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         mediaRecorder.setVideoSize(VIDEO_SIZE[0], VIDEO_SIZE[1]);
         //  mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_720P));
@@ -488,8 +474,10 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             mediaRecorder.setMaxDuration(maxDurationMs);
             mediaRecorder.setOnInfoListener(onInfoListener);
         }
-        driveVideo = getMediaOutputPath();
-        mediaRecorder.setOutputFile(driveVideo.getPath());
+     //   driveVideo = getMediaOutputPath();
+     //   mediaRecorder.setOutputFile(driveVideo.getPath());
+        currentVediopah =getMediaOutputPath();
+        mediaRecorder.setOutputFile(currentVediopah);
         // 设置录制文件最长时间(10分钟)
         mediaRecorder.setMaxDuration(1000 * 60);
         mediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
@@ -517,20 +505,6 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         }
         return true;
 
-
-        //  mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        //  mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-        //   mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-        //     mediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
-        //     mediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-       /* Camera.Size videoSize = CamParaUtil.getSize(mParam.getSupportedVideoSizes(), 1000,
-                mCamera.new Size(VIDEO_1080[0], VIDEO_1080[1]));
-        mediaRecorder.setVideoSize(videoSize.width, videoSize.height);*/
-        //   mediaRecorder.setVideoSize(480, 320);
-        //   mediaRecorder.setVideoEncodingBitRate(5 * 1024 * 1024);
-        //    mediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());//设置录制预览surface
-        //相机参数配置类
-
     }
 
     public void stopRecord() {
@@ -541,9 +515,9 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             isRecording = false;
             Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
             if (MainActivity.IsZhualu) {
-                EventBus.getDefault().post(new RefreshEvent(4, driveVideo.getPath(), ""));
+                EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
             }
-          //  videoDb.addDriveVideo(driveVideo);
+            //  videoDb.addDriveVideo(driveVideo);
         } catch (IllegalStateException e) {
             e.printStackTrace();
         }
@@ -580,7 +554,24 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     }
 
     //获取视频存储路径
-    public DriveVideo getMediaOutputPath() {
+ /*   public DriveVideo getMediaOutputPath() {
+        String name = getTime();
+        String filepath = rootPath + "/vedio";
+        File file = new File(filepath);
+        if (!file.exists()) {
+            file.mkdirs();
+        }
+
+        String dangerfilepath = rootPath + "/dangervedio";
+        File dangerfile = new File(dangerfilepath);
+        if (!dangerfile.exists()) {
+            dangerfile.mkdirs();
+        }
+        String vediopath = rootPath + "/vedio/" + name + ".mp4";
+        return new DriveVideo(name, 0, 480, vediopath);
+    }*/
+    //获取视频存储路径
+    public String getMediaOutputPath() {
         String name = getTime();
         String filepath = rootPath + "/vedio";
         File file = new File(filepath);
@@ -596,9 +587,8 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             dangerfile.mkdirs();
         }
         String vediopath = rootPath + "/vedio/" + name + ".mp4";
-        return new DriveVideo(name, 0, 480, vediopath);
+        return vediopath;
     }
-
     /*  private  String getTime() {
           return new SimpleDateFormat("yyyyMMdd-HH:mm:ss").format(new Date(System.currentTimeMillis()));
       }*/
@@ -606,11 +596,4 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         return new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date(System.currentTimeMillis()));
     }
 
-    public boolean isExternalStorageWritable() {
-        String state = Environment.getExternalStorageState();
-        if (Environment.MEDIA_MOUNTED.equals(state)) {
-            return true;
-        }
-        return false;
-    }
 }

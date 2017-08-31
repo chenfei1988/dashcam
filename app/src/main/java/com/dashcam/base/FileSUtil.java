@@ -10,10 +10,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import android.content.Context;
+import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiManager;
 import android.os.Environment;
 import android.text.TextUtils;
 
@@ -588,6 +594,48 @@ public final class FileSUtil {
         File file = new File(path);
         return (file.exists() && file.isFile() ? file.length() : -1);
     }
-
-
+    public static boolean isWifiApOpen(Context context) {
+        try {
+            WifiManager manager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+            //通过放射获取 getWifiApState()方法
+            Method method = manager.getClass().getDeclaredMethod("getWifiApState");
+            //调用getWifiApState() ，获取返回值
+            int state = (int) method.invoke(manager);
+            //通过放射获取 WIFI_AP的开启状态属性
+            Field field = manager.getClass().getDeclaredField("WIFI_AP_STATE_ENABLED");
+            //获取属性值
+            int value = (int) field.get(manager);
+            //判断是否开启
+            if (state == value) {
+                return true;
+            } else {
+                return false;
+            }
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+    public static String Getapwifinameandpassword(Context context) {
+        try {
+            WifiManager manager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
+            Method method = manager.getClass().getMethod("getWifiApConfiguration");
+            method.setAccessible(true);
+            WifiConfiguration config = (WifiConfiguration) method.invoke(manager);
+            return config.SSID+","+config.preSharedKey;
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
+        return ",";
+    }
 }

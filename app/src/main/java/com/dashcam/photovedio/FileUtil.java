@@ -280,4 +280,22 @@ public class FileUtil {
 
         return max;
     }
+
+
+    //获取视频存储路径
+    public static String getMediaOutputPath() {
+        return rootPath + "/" + getTime() + ".mp4";
+    }
+
+    private static String getTime() {
+        return new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date(System.currentTimeMillis()));
+    }
+
+    public static boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
+    }
 }
