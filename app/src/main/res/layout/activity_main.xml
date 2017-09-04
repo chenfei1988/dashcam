@@ -33,12 +33,14 @@
             android:id="@+id/intoxiumian"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="进入休眠"/>
+            android:text="进入休眠"
+            android:visibility="invisible"/>
         <Button
             android:id="@+id/outxiumian"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="50dp"
-            android:text="退出休眠"/>
+            android:text="退出休眠"
+            android:visibility="invisible"/>
     </RelativeLayout>
 </LinearLayout>
