@@ -33,6 +33,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -44,6 +45,7 @@ import com.dashcam.base.FileInfo;
 import com.dashcam.base.FileSUtil;
 import com.dashcam.base.MacUtils;
 import com.dashcam.base.MyAPP;
+import com.dashcam.base.NetworkStatsHelper;
 import com.dashcam.base.PhoneInfoUtils;
 import com.dashcam.base.RefreshEvent;
 import com.dashcam.base.SPUtils;
@@ -65,6 +67,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -126,7 +129,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private String rootPath = "";//存放视频的路径
     int Batterylevel = 100;//电池电量
     private String phonenumber = "";
-    private String G4Itedbm = "";//4G信号强弱
+    private String G4Itedbm = "0";//4G信号强弱
     public static boolean IsBackCamera = true;
     public static boolean IsZhualu = false;//是否在抓录视频
     private boolean IsPengZhuang = false;//是否是碰撞
@@ -198,16 +201,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         checkPermissionsUtil.requestAllPermission(this);
         if (hasPermissionToReadNetworkStats()) {
             NetworkStatsManager networkStatsManager = (NetworkStatsManager) getSystemService(NETWORK_STATS_SERVICE);
-            NetworkStats.Bucket bucket = null;
-            // 获取到目前为止设备的Wi-Fi流量统计
-            try {
-                bucket = networkStatsManager.querySummaryForDevice(ConnectivityManager.TYPE_WIFI, "", 0, System.currentTimeMillis());
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-            liuliang.setText(bucket.getRxBytes() + bucket.getTxBytes() + "B");
+            long liangliangbyte = new NetworkStatsHelper(networkStatsManager).getAllMonthMobile(this);
+            liuliang.setText(liangliangbyte + "B");
         }
         phonenumber = new PhoneInfoUtils(context).getNativePhoneNumber();
+        if (phonenumber == null) {
+            phonenumber = "";
+        }
         FileUtil.getCurrentNetDBM(MainActivity.this);
         rootPath = FileUtil.getStoragePath(this, true);
         if (rootPath == null) {
@@ -236,6 +236,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // 参数三，检测的精准度
         mSensorManager.registerListener(this, mSensor,
                 SensorManager.SENSOR_DELAY_NORMAL);// SENSOR_DELAY_GAME
+        InitDeleteShanchu();
         myHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -248,6 +249,18 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         cameraSurfaceView = (CameraSurfaceView) findViewById(R.id.cameraSurfaceView);
         ExecutorService exec = Executors.newCachedThreadPool();
+        findViewById(R.id.intoxiumian).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                IntoXiumian();
+            }
+        });
+        findViewById(R.id.outxiumian).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                OutXiumian();
+            }
+        });
         client = new UDPClient();
         exec.execute(client);
         if (timer1 == null) {
@@ -256,7 +269,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         if (timer3 == null) {
             timer3 = new Timer();
-            timer3.schedule(clearTFtask, 3000, 1000 * 60 * 5);
+            timer3.schedule(clearTFtask, 3000, 1000 * 60 * 2);
         }
       /*  smsReceiver = new SmsReceiver();
         IntentFilter filter = new IntentFilter("android.provider.Telephony.SMS_RECEIVED");
@@ -288,7 +301,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             client.send(sendtext);
             message.obj = sendtext;
             myHandler.sendMessage(message);
-
             //每隔30秒判断车辆是否停止，如果停止，则关闭录像
         }
     };
@@ -305,15 +317,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onEvnet(RefreshEvent refresh) {
         if (refresh.getYwlx() == 1) {  //上传图片
             savePicture(refresh.getPhotopath());
-            if (!IsBackCamera) {
-                cameraSurfaceView.stopRecord();
-                cameraSurfaceView.setDefaultCamera(true);
 
+            if (!IsBackCamera) {
+                //  cameraSurfaceView.stopRecord();
+                cameraSurfaceView.setDefaultCamera(true);
                 IsBackCamera = true;
                 //  IsStopRecord = false;
-                cameraSurfaceView.startRecord();
+                if (IsXiumian) {
+                    cameraSurfaceView.closeCamera();
+                } else {
+                    cameraSurfaceView.startRecord();
+                }
             }
-        } else if (refresh.getYwlx() == 2) { //获取余额
+        } else if (refresh.getYwlx() == 2) { //
 
             String sendtext = "*" + IMEI + ",6,"
                     + refresh.getPhotopath() + "#";
@@ -331,8 +347,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 cameraSurfaceView.stopRecord();
                 cameraSurfaceView.setDefaultCamera(true);
                 IsBackCamera = true;
-                //   IsStopRecord = false;
-                cameraSurfaceView.startRecord();
+                if (IsXiumian) {
+                    cameraSurfaceView.closeCamera();
+                } else {
+                    //   IsStopRecord = false;
+                    cameraSurfaceView.startRecord();
+                }
             }
          /*   String sendtext = "*" + IMEI + ",8,"
                     + refresh.getPhotopath() + "#";
@@ -353,11 +373,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void BindReceiver() {
         IntentFilter intentFilter1 = new IntentFilter("udpRcvMsg");
         IntentFilter intentFilter2 = new IntentFilter("com.android.settings.suspend");
-        IntentFilter intentFilter3 = new IntentFilter(Intent.ACTION_POWER_CONNECTED
-        );
+        IntentFilter intentFilter3 = new IntentFilter(Intent.ACTION_POWER_CONNECTED);
+        IntentFilter intentFilter4 = new IntentFilter("rock.intent.CHECK_NEW_SOFTWARE");//有升级消息的通知
+        IntentFilter intentFilter5 = new IntentFilter("rock.intent.INSTALL.SUCCESS");//升级成功的广播
+        IntentFilter intentFilter6 = new IntentFilter("rock.intent.UPDATE_FAIL");//升级失败的广播
         registerReceiver(myBroadcastReceiver, intentFilter1);
         registerReceiver(myBroadcastReceiver, intentFilter2);
         registerReceiver(myBroadcastReceiver, intentFilter3);
+        registerReceiver(myBroadcastReceiver, intentFilter4);
+        registerReceiver(myBroadcastReceiver, intentFilter5);
+        registerReceiver(myBroadcastReceiver, intentFilter6);
 
     }
 
@@ -373,39 +398,39 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     GetZhilingType(msg);
                     break;
                 case "com.android.settings.suspend":  //进入休眠
-                    IsXiumian = true;
-                    //   cameraSurfaceView.stopRecord();
-                    cameraSurfaceView.closeCamera();
-                    if (timer1 != null) {
-                        timer1.cancel();
-                        timer1 = null;
-                    }
-                    mLocationUtil.stopLocate();
-                    final String intoxiumiantext = "*" + IMEI + ",18,"
-                            + 0 + "#";
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            client.send(intoxiumiantext);
-                        }
-                    }).start();
+                    IntoXiumian();
                     break;
                 case Intent.ACTION_POWER_CONNECTED
                         :  //退出休眠
-                    IsXiumian = false;
-                    mLocationUtil.startLocate();
-                    cameraSurfaceView.openCamera();
-                    cameraSurfaceView.startRecord();
-                    if (timer1 == null) {
-                        timer1 = new Timer();
-                        timer1.schedule(task, 3000, 10000);
-                    }
-                    final String outxiumiantext = "*" + IMEI + ",18,"
-                            + 1 + "#";
+                    OutXiumian();
+                    break;
+                case "rock.intent.CHECK_NEW_SOFTWARE"://有更新的时候
+                    final String updatetext = "*" + IMEI + ",25"
+                            + "#";
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
-                            client.send(outxiumiantext);
+                            client.send(updatetext);
+                        }
+                    }).start();
+                    break;
+                case "rock.intent.INSTALL.SUCCESS":
+                    final String updatesuccesstext = "*" + IMEI + ",26"
+                            + "#";
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            client.send(updatesuccesstext);
+                        }
+                    }).start();
+                    break;
+                case "rock.intent.UPDATE_FAIL":
+                    final String updatefailedtext = "*" + IMEI + ",27"
+                            + "#";
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            client.send(updatefailedtext);
                         }
                     }).start();
                     break;
@@ -413,7 +438,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
-    private void GetZhilingType(String msg) {
+    private synchronized void GetZhilingType(String msg) {
 
         if (msg.contains("*") && msg.contains("#")) {
             msg = msg.replace("*", "").replace("#", "");
@@ -425,22 +450,30 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 case "99":// 微信公众号抓拍的协议，我这边接受服务器的指令，拍照并上传，并把照片路径发送给服务器
                     if (types.length == 3) {
                         String lushu = types[2];
+                        if (IsXiumian == true) {
+                            cameraSurfaceView.openCamera();
+                            cameraSurfaceView.startPreview();
+                        }
                         // (0 前置摄像头,1 后置摄像头)
                         if (lushu.equals("0")) {
                             cameraSurfaceView.capture();
                         } else if (lushu.equals("1")) {
                             //           IsStopRecord = true;
                             //     cameraSurfaceView.isRecording = false;
-                            cameraSurfaceView.stopRecord();
-                            cameraSurfaceView.setDefaultCamera(false);
-                            IsBackCamera = false;
-                            new Handler().postDelayed(new Runnable() {
-                                @Override
-                                public void run() {
-                                    cameraSurfaceView.capture();
-                                }
-                            }, 500);
+                            try {
+                                cameraSurfaceView.stopRecord();
+                                cameraSurfaceView.setDefaultCamera(false);
+                                IsBackCamera = false;
+                                cameraSurfaceView.capture();
+                              /*  new Handler().postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        cameraSurfaceView.capture();
+                                    }
+                                }, 500);*/
+                            } catch (Exception e) {
 
+                            }
                         }
                     }
                     break;
@@ -694,17 +727,27 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     if (types.length == 3) {
                         String lushu = types[2];
                         // (0 前置摄像头,1 后置摄像头)
-
+                        if (IsXiumian) {
+                            cameraSurfaceView.openCamera();
+                            cameraSurfaceView.startPreview();
+                        }
                         if (lushu.equals("0")) {
                             IsZhualu = true;
+                            if (IsXiumian) {
+                                cameraSurfaceView.startRecord();
+                            }
                             //  cameraSurfaceView.capture();
                         } else if (lushu.equals("1")) {
                             //     IsStopRecord = true;
-                            cameraSurfaceView.stopRecord();
-                            cameraSurfaceView.setDefaultCamera(false);
-                            IsBackCamera = false;
-                            IsZhualu = true;
-                            StartRecord();
+                            try {
+                                cameraSurfaceView.stopRecord();
+                                cameraSurfaceView.setDefaultCamera(false);
+                                IsBackCamera = false;
+                                IsZhualu = true;
+                                StartRecord();
+                            } catch (Exception e) {
+
+                            }
                         }
                     }
                     break;
@@ -827,7 +870,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             int temperature = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0);
-            if (temperature > 700) {
+            if (temperature > 680) {
 
                 final String xiumiantext = "*" + IMEI + ",77,"
                         + 3 + "#";
@@ -843,71 +886,52 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 // 电池当前的电量, 它介于0和 EXTRA_SCALE之间
                 Batterylevel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
                 // 电池电量的最大值
-                if (status == BatteryManager.BATTERY_STATUS_CHARGING) {
-                  /*  IsCharge = true;
-                    if (IsXiumian == true) {
-                        IsCarStop = false;
-                        IsXiumian = false;
-                        final String xiumiantext = "*" + IMEI + ",18,"
-                                + 1 + "#";
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                client.send(xiumiantext);
-                            }
-                        }).start();
-                        StartRecord();
-                    }
-                    //唤醒休眠
-                    Toast.makeText(MainActivity.this, "正在充电", Toast.LENGTH_LONG);*/
-                } else {
+                if (status == BatteryManager.BATTERY_STATUS_NOT_CHARGING) {
                     if (Batterylevel == Batterylevelbobao) {
-                       if (Batterylevelbobao==20){
-                           Batterylevelbobao=10;
-                           final String xiumiantext = "*" + IMEI + ",77,"
-                                   + 1 + "#";
-                           new Thread(new Runnable() {
-                               @Override
-                               public void run() {
-                                   client.send(xiumiantext);
-                               }
-                           }).start();
-                           Timer timer = new Timer();//实例化Timer类
-                           timer.schedule(new TimerTask() {
-                               public void run() {
-                                   client.send(xiumiantext);
-                                   this.cancel();
-                               }
-                           }, 10000);//10秒
-                       }
-                       else if(Batterylevelbobao==10){
-                           Batterylevelbobao=1;
-                           final String xiumiantext = "*" + IMEI + ",77,"
-                                   + 1 + "#";
-                           new Thread(new Runnable() {
-                               @Override
-                               public void run() {
-                                   client.send(xiumiantext);
-                               }
-                           }).start();
-                           Timer timer = new Timer();//实例化Timer类
-                           timer.schedule(new TimerTask() {
-                               public void run() {
-                                   client.send(xiumiantext);
-                                   this.cancel();
-                               }
-                           }, 10000);//10秒
-                       }
-                        else if(Batterylevelbobao==1){
-                           final String xiumiantext = "*" + IMEI + ",77,"
-                                   + 2 + "#";
-                           new Thread(new Runnable() {
-                               @Override
-                               public void run() {
-                                   client.send(xiumiantext);
-                               }
-                           }).start();
-                       }
+                        if (Batterylevelbobao == 20) {
+                            Batterylevelbobao = 10;
+                            final String xiumiantext = "*" + IMEI + ",77,"
+                                    + 1 + "#";
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    client.send(xiumiantext);
+                                }
+                            }).start();
+                            Timer timer = new Timer();//实例化Timer类
+                            timer.schedule(new TimerTask() {
+                                public void run() {
+                                    client.send(xiumiantext);
+                                    this.cancel();
+                                }
+                            }, 10000);//10秒
+                        } else if (Batterylevelbobao == 10) {
+                            Batterylevelbobao = 1;
+                            final String xiumiantext = "*" + IMEI + ",77,"
+                                    + 1 + "#";
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    client.send(xiumiantext);
+                                }
+                            }).start();
+                            Timer timer = new Timer();//实例化Timer类
+                            timer.schedule(new TimerTask() {
+                                public void run() {
+                                    client.send(xiumiantext);
+                                    this.cancel();
+                                }
+                            }, 10000);//10秒
+                        } else if (Batterylevelbobao == 1) {
+                            final String xiumiantext = "*" + IMEI + ",77,"
+                                    + 2 + "#";
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    client.send(xiumiantext);
+                                }
+                            }).start();
+                        }
 
                     }
                 }
@@ -997,11 +1021,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-       /* if (keyCode == KeyEvent.KEYCODE_BACK) {
+  /*      if (keyCode == KeyEvent.KEYCODE_BACK) {
             moveTaskToBack(false);
             return true;
         }*/
         if (keyCode == KeyEvent.KEYCODE_F11) {
+            long currenttime = System.currentTimeMillis();
             IsPengZhuang = true;
             cameraSurfaceView.capture();
             cameraSurfaceView.capture();
@@ -1010,7 +1035,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             cameraSurfaceView.capture();
             cameraSurfaceView.stopRecord();
             cameraSurfaceView.setDefaultCamera(false);
-            //  IsBackCamera = false;
+            IsBackCamera = false;
             cameraSurfaceView.capture();
             cameraSurfaceView.capture();
             cameraSurfaceView.capture();
@@ -1018,8 +1043,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             cameraSurfaceView.capture();
             cameraSurfaceView.setDefaultCamera(true);
             cameraSurfaceView.startRecord();
-            // IsBackCamera = true;
+            IsBackCamera = true;
             IsPengZhuang = false;
+            FileUtil.MoveFiletoDangerFile(currenttime, rootPath);
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -1160,7 +1186,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             return true;
         }
 
-        //   requestReadNetworkStats();
+        requestReadNetworkStats();
         return false;
     }
 
@@ -1274,6 +1300,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                      JSONObject mJsonObject = new JSONObject(s);
                                      if (mJsonObject.getBoolean("success")) {
                                          cishu = 0;
+                                         InitDeleteShanchu();
                                          String backurl = mJsonObject.getString("msg");
                                          backurl = "*" + IMEI + ",2," + backurl + "#";
                                          final String url = backurl;
@@ -1355,30 +1382,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (!fileroot.exists()) {
             return;
         }
-        /*
-        删除原图片目录
-         */
-        File filephoto = new File(rootPath + "/photo/");
-        if (!filephoto.exists()) {
-            return;
-        } else {
-            if (filephoto.isDirectory()) {
-                for (File f : filephoto.listFiles())
-                    f.delete();
-            }
-        }
-        /*
-        删除压缩图片目录
-         */
-        File filephotomini = new File(rootPath + "/photomini/");
-        if (!filephotomini.exists()) {
-            return;
-        } else {
-            if (filephotomini.isDirectory()) {
-                for (File f : filephotomini.listFiles())
-                    f.delete();
-            }
-        }
+
         //取出文件列表：
         StringBuilder builder = new StringBuilder();
         final File[] files = fileroot.listFiles();
@@ -1392,8 +1396,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             fileList.add(fileInfo);
         }
         Collections.sort(fileList, new FileComparator());//通过重写Comparator的实现类FileComparator来
-        if (fileList.size() > 10) {
-            for (int i = 0; i < 10; i++) {
+        if (fileList.size() > 40) {
+            for (int i = 0; i < 40; i++) {
                 File f = new File(fileList.get(i).getPath());
                 if (f.exists() && f.isFile()) {
                     f.delete();
@@ -1489,7 +1493,70 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             return true;
         }
     }*/
+    private void InitDeleteShanchu() {
 
+        /*
+        删除原图片目录
+         */
+        File filephoto = new File(rootPath + "/photo/");
+        if (!filephoto.exists()) {
+            return;
+        } else {
+            if (filephoto.isDirectory()) {
+                for (File f : filephoto.listFiles())
+                    f.delete();
+            }
+        }
+        /*
+        删除压缩图片目录
+         */
+        File filephotomini = new File(rootPath + "/photomini/");
+        if (!filephotomini.exists()) {
+            return;
+        } else {
+            if (filephotomini.isDirectory()) {
+                for (File f : filephotomini.listFiles())
+                    f.delete();
+            }
+        }
+    }
 
+    public void IntoXiumian() {
+        IsXiumian = true;
+        //   cameraSurfaceView.stopRecord();
+        cameraSurfaceView.closeCamera();
+        mLocationUtil.stopLocate();
+        mVideoServer.stop();
+        final String intoxiumiantext = "*" + IMEI + ",18,"
+                + 0 + "#";
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                client.send(intoxiumiantext);
+            }
+        }).start();
+
+    }
+
+    public void OutXiumian() {
+        IsXiumian = false;
+        mLocationUtil.startLocate();
+        cameraSurfaceView.openCamera();
+        cameraSurfaceView.startPreview();
+        cameraSurfaceView.startRecord();
+        try {
+            mVideoServer.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        final String outxiumiantext = "*" + IMEI + ",18,"
+                + 1 + "#";
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                client.send(outxiumiantext);
+            }
+        }).start();
+    }
 }
 
