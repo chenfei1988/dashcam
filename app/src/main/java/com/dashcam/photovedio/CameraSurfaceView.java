@@ -466,7 +466,8 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
         mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-        mediaRecorder.setVideoSize(VIDEO_SIZE[0], VIDEO_SIZE[1]);
+      //  mediaRecorder.setVideoSize(VIDEO_SIZE[0], VIDEO_SIZE[1]);
+        mediaRecorder.setVideoSize(720, 720);
         //  mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_720P));
         mediaRecorder.setVideoFrameRate(40);
         mediaRecorder.setVideoEncodingBitRate(40 * 1024 * 1024);
@@ -524,7 +525,9 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             Calendar mCalendar = Calendar.getInstance();
             long tamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
             if (tamp-starttimelamp<2) {
-              new Handler().postDelayed(new Runnable() {
+                Thread.sleep(1000);
+                stopRecord();
+              /*new Handler().postDelayed(new Runnable() {
                   @Override
                   public void run() {
                       mediaRecorder.stop();
@@ -534,7 +537,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                           EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
                       }
                   }
-              },2000);
+              },2000);*/
             }
             else{
                 mediaRecorder.stop();
@@ -548,6 +551,8 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
             //  videoDb.addDriveVideo(driveVideo);
         } catch (IllegalStateException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }

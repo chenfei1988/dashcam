@@ -159,14 +159,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
             switch (msg.what) {
-                case 9:
+             /*   case 9:
                     cameraSurfaceView.stopRecord();
                     //   new clearTFCardethread().start();
                     //  if (!IsStopRecord && IsBackCamera&&!IsZhualu) { //不停止录像并且是后置摄像头，因为抓录前置摄像头时只用录像一次
                     if (IsBackCamera && !IsZhualu) { //不停止录像并且是后置摄像头，因为抓录前置摄像头时只用录像一次
                         StartRecord();
                     }
-                    break;
+                    break;*/
                 case 10:
                     //   IsStopRecord = false;
                     if (DateUtils.IsDay()) {
@@ -202,7 +202,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         if (hasPermissionToReadNetworkStats()) {
             NetworkStatsManager networkStatsManager = (NetworkStatsManager) getSystemService(NETWORK_STATS_SERVICE);
             long liangliangbyte = new NetworkStatsHelper(networkStatsManager).getAllMonthMobile(this);
-            liuliang.setText(liangliangbyte + "B");
+            liuliang.setText((int)(liangliangbyte/1024/1024)+"");
         }
         phonenumber = new PhoneInfoUtils(context).getNativePhoneNumber();
         if (phonenumber == null) {
@@ -294,13 +294,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     TimerTask task = new TimerTask() {
         @Override
         public void run() {
-            Message message = new Message();
-            message.what = 2;
+          //  Message message = new Message();
+          //  message.what = 2;
             String sendtext = "*" + IMEI + ",1,"
                     + GPSSTR + "#";
             client.send(sendtext);
-            message.obj = sendtext;
-            myHandler.sendMessage(message);
+         //   message.obj = sendtext;
+         //   myHandler.sendMessage(message);
             //每隔30秒判断车辆是否停止，如果停止，则关闭录像
         }
     };
