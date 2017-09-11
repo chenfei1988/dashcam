@@ -89,7 +89,7 @@ import okhttp3.Response;
 
 import static com.dashcam.photovedio.FileUtil.getConnectedIP;
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener, BDLocationListener {
+public class MainActivity extends AppCompatActivity implements  BDLocationListener {
 
     @Bind(R.id.liuliang)
     TextView liuliang;
@@ -132,10 +132,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private String G4Itedbm = "0";//4G信号强弱
     public static boolean IsBackCamera = true;
     public static boolean IsZhualu = false;//是否在抓录视频
-    private boolean IsPengZhuang = false;//是否是碰撞
-    int cishu = 0;//上传3次，不成功退出
+    public static boolean IsPengZhuang = false;//是否是碰撞
+   // int cishu = 0;//上传3次，不成功退出
     int Batterylevelbobao = 20;//电池电量
-
+    public static  int PZZPCS = 0;//碰撞抓拍次数
+    private long pengzhuangtimestamp = 0;
     @Override
     public void onReceiveLocation(BDLocation location) {
         if (location != null) {
@@ -199,11 +200,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private void initData() {
         CheckPermissionsUtil checkPermissionsUtil = new CheckPermissionsUtil(this);
         checkPermissionsUtil.requestAllPermission(this);
-        if (hasPermissionToReadNetworkStats()) {
+       // liuliang.setText(0+"");//C类问题先不管
+      /*  if (hasPermissionToReadNetworkStats()) {
             NetworkStatsManager networkStatsManager = (NetworkStatsManager) getSystemService(NETWORK_STATS_SERVICE);
             long liangliangbyte = new NetworkStatsHelper(networkStatsManager).getAllMonthMobile(this);
             liuliang.setText((int)(liangliangbyte/1024/1024)+"");
-        }
+        }*/
         phonenumber = new PhoneInfoUtils(context).getNativePhoneNumber();
         if (phonenumber == null) {
             phonenumber = "";
@@ -226,7 +228,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // 每次调整的音量大概为最大音量的1/6
         // stepVolume = maxVolume / 8;
         Calendar mCalendar = Calendar.getInstance();
-        lastaccelerometertimestamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
+     //   lastaccelerometertimestamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
         mSensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         mSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);// TYPE_GRAVITY
         IMEI = getid();
@@ -234,8 +236,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Log.d("dfdfd", "deveice not support SensorManager");
         }
         // 参数三，检测的精准度
-        mSensorManager.registerListener(this, mSensor,
-                SensorManager.SENSOR_DELAY_NORMAL);// SENSOR_DELAY_GAME
+   /*     mSensorManager.registerListener(this, mSensor,
+                SensorManager.SENSOR_DELAY_NORMAL);// SENSOR_DELAY_GAME*/
         InitDeleteShanchu();
         myHandler.postDelayed(new Runnable() {
             @Override
@@ -258,7 +260,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         findViewById(R.id.outxiumian).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                OutXiumian();
+               // OutXiumian();
+                IntoPengZhuang();
             }
         });
         client = new UDPClient();
@@ -317,8 +320,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onEvnet(RefreshEvent refresh) {
         if (refresh.getYwlx() == 1) {  //上传图片
             savePicture(refresh.getPhotopath());
-
-            if (!IsBackCamera) {
+            if (!IsBackCamera&&!IsPengZhuang) {
                 //  cameraSurfaceView.stopRecord();
                 cameraSurfaceView.setDefaultCamera(true);
                 IsBackCamera = true;
@@ -342,7 +344,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             client.send(sendtext);*/
         } else if (refresh.getYwlx() == 4) {   //抓录视频
             String vediopath = refresh.getPhotopath();
-            saveFile(vediopath);
+            saveFile(vediopath,IsZhualu);
+            IsZhualu=false;
             if (!IsBackCamera) {
                 cameraSurfaceView.stopRecord();
                 cameraSurfaceView.setDefaultCamera(true);
@@ -372,17 +375,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private void BindReceiver() {
         IntentFilter intentFilter1 = new IntentFilter("udpRcvMsg");
-        IntentFilter intentFilter2 = new IntentFilter("com.android.settings.suspend");
+        IntentFilter intentFilter2 = new IntentFilter("android.intent.GO_SUSPEND");
         IntentFilter intentFilter3 = new IntentFilter(Intent.ACTION_POWER_CONNECTED);
         IntentFilter intentFilter4 = new IntentFilter("rock.intent.CHECK_NEW_SOFTWARE");//有升级消息的通知
         IntentFilter intentFilter5 = new IntentFilter("rock.intent.INSTALL.SUCCESS");//升级成功的广播
         IntentFilter intentFilter6 = new IntentFilter("rock.intent.UPDATE_FAIL");//升级失败的广播
+        IntentFilter intentFilter7 = new IntentFilter("android.intent.KEYCODE_F11");//升级失败的广播
         registerReceiver(myBroadcastReceiver, intentFilter1);
         registerReceiver(myBroadcastReceiver, intentFilter2);
         registerReceiver(myBroadcastReceiver, intentFilter3);
         registerReceiver(myBroadcastReceiver, intentFilter4);
         registerReceiver(myBroadcastReceiver, intentFilter5);
         registerReceiver(myBroadcastReceiver, intentFilter6);
+        registerReceiver(myBroadcastReceiver, intentFilter7);
 
     }
 
@@ -397,7 +402,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     String msg = intent.getStringExtra("udpRcvMsg");
                     GetZhilingType(msg);
                     break;
-                case "com.android.settings.suspend":  //进入休眠
+                case "android.intent.GO_SUSPEND":  //进入休眠
                     IntoXiumian();
                     break;
                 case Intent.ACTION_POWER_CONNECTED
@@ -433,6 +438,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                             client.send(updatefailedtext);
                         }
                     }).start();
+                    break;
+                case "android.intent.KEYCODE_F11":
+                    long currenttime = System.currentTimeMillis();
+                    if (currenttime-pengzhuangtimestamp>30*1000) {
+                        pengzhuangtimestamp = currenttime;
+                        IntoPengZhuang();
+                    }
+                    break;
+                default:
                     break;
             }
         }
@@ -649,7 +663,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 case "87"://提取录像平台发送  *终端编号,87,文件名#
                     if (types.length == 3) {
                         String filename = types[2];
-                        saveFile(DEFAULT_FILE_PATH + filename);
+                        saveFile(DEFAULT_FILE_PATH + filename,false);
                     }
                     break;
                 case "86"://开启WIFI  *终端编号,86#
@@ -938,53 +952,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }
     };
-    private int mX, mY, mZ;
-    private long lastaccelerometertimestamp = 0; //上次加速度不为0的时间
-    private int maxvalue;
 
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        if (event.sensor == null) {
-            return;
-        }
 
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            int x = (int) event.values[0];
-            int y = (int) event.values[1];
-            int z = (int) event.values[2];
-            Calendar mCalendar = Calendar.getInstance();
-            long stamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
-            int px = Math.abs(mX - x);
-            int py = Math.abs(mY - y);
-            int pz = Math.abs(mZ - z);
-            maxvalue = FileUtil.getMaxValue(px, py, pz);
-        /*    if (maxvalue > 3) {
-                lastaccelerometertimestamp = stamp;
-                //唤醒休眠
-                IsCarStop = false;
-                if (IsXiumian == true) {
-                    IsXiumian = false;
-                    final String xiumiantext = "*" + IMEI + ",18,"
-                            + 1 + "#";
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            client.send(xiumiantext);
-                        }
-                    }).start();
-                    StartRecord();
-                }
-            }
-            mX = x;
-            mY = y;
-            mZ = z;*/
-        }
-    }
-
-    @Override
+   /* @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
-    }
+    }*/
 
     @Override
     protected void onDestroy() {
@@ -1019,38 +992,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         return super.onKeyLongPress(keyCode, event);
     }
 
-    @Override
+   /* @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
   /*      if (keyCode == KeyEvent.KEYCODE_BACK) {
             moveTaskToBack(false);
             return true;
-        }*/
+        }
         if (keyCode == KeyEvent.KEYCODE_F11) {
-            long currenttime = System.currentTimeMillis();
-            IsPengZhuang = true;
-            cameraSurfaceView.capture();
-            cameraSurfaceView.capture();
-            cameraSurfaceView.capture();
-            cameraSurfaceView.capture();
-            cameraSurfaceView.capture();
-            cameraSurfaceView.stopRecord();
-            cameraSurfaceView.setDefaultCamera(false);
-            IsBackCamera = false;
-            cameraSurfaceView.capture();
-            cameraSurfaceView.capture();
-            cameraSurfaceView.capture();
-            cameraSurfaceView.capture();
-            cameraSurfaceView.capture();
-            cameraSurfaceView.setDefaultCamera(true);
-            cameraSurfaceView.startRecord();
-            IsBackCamera = true;
-            IsPengZhuang = false;
-            FileUtil.MoveFiletoDangerFile(currenttime, rootPath);
-            return true;
+             IntoPengZhuang();
+             return  true;
         }
         return super.onKeyDown(keyCode, event);
 
-    }
+    }*/
 
     private void SendCommonReply(final String zlbh) {
 
@@ -1093,35 +1047,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             e.printStackTrace();
             return false;
         }
-    /*    if (name.equals("")) {
-            name = (String) SPUtils.get(MainActivity.this, "wifiname", WIFI_HOTSPOT_SSID + MacUtils.getMacAddr());
-        }
-        config.SSID = name;
-        if (password.equals("")) {
-            password = (String) SPUtils.get(MainActivity.this, "wifipassword", "12345678");
-        }
-        config.preSharedKey = password;
-        config.hiddenSSID = true;
-        config.allowedAuthAlgorithms
-                .set(WifiConfiguration.AuthAlgorithm.OPEN);//开放系统认证
-        config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP);
-        config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
-        config.allowedPairwiseCiphers
-                .set(WifiConfiguration.PairwiseCipher.TKIP);
-        config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
-        config.allowedPairwiseCiphers
-                .set(WifiConfiguration.PairwiseCipher.CCMP);
-        config.status = WifiConfiguration.Status.ENABLED;*/
-      /*  try {
-            Method method = wifiManager.getClass().getMethod(
-                    "setWifiApEnabled", WifiConfiguration.class, Boolean.TYPE);
-            boolean enable = (Boolean) method.invoke(wifiManager, config, true);
-            return enable;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-
-        }*/
     }
 
     /**
@@ -1205,7 +1130,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 AudioManager.FLAG_PLAY_SOUND);
     }
 
-    public void saveFile(final String path) {
+    public void saveFile(final String path,final boolean IsZhualu) {
         List<File> mList = new ArrayList<>();
         mList.add(new File(path));
         OkHttpUtils.post(ApiInterface.saveFile)     // 请求方式和请求url
@@ -1220,11 +1145,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                                      JSONObject mJsonObject = new JSONObject(s);
                                      if (mJsonObject.getBoolean("success")) {
-                                         cishu = 0;
+                                    //     cishu = 0;
                                          String backurl = mJsonObject.getString("msg");
                                          //    backurl = backurl.substring(0, backurl.length() - 1);
                                          if (IsZhualu) {
-                                             IsZhualu = false;
                                              backurl = "*" + IMEI + ",21," + backurl + "#";
                                          } else {
                                              backurl = "*" + IMEI + ",14," + backurl + "#";
@@ -1253,9 +1177,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                              @Override
                              public void onError(boolean isFromCache, Call call, @Nullable Response
                                      response, @Nullable Exception e) {
-                                 if (cishu < 3) {
+  /*                               if (cishu < 3) {
                                      saveFile(path);
-                                 }
+                                 }*/
                                /*  String backurl = "";
                                  if (IsZhualu) {
                                      IsZhualu = false;
@@ -1299,7 +1223,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                                  try {
                                      JSONObject mJsonObject = new JSONObject(s);
                                      if (mJsonObject.getBoolean("success")) {
-                                         cishu = 0;
+                                    //     cishu = 0;
                                          InitDeleteShanchu();
                                          String backurl = mJsonObject.getString("msg");
                                          backurl = "*" + IMEI + ",2," + backurl + "#";
@@ -1327,10 +1251,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                              @Override
                              public void onError(boolean isFromCache, Call call, @Nullable Response
                                      response, @Nullable Exception e) {
-                                 cishu = cishu + 1;
+                           /*      cishu = cishu + 1;
                                  if (cishu < 3) {
                                      savePicture(path);
-                                 }
+                                 }*/
                                  super.onError(isFromCache, call, response, e);
 
                              }
@@ -1352,7 +1276,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public FileFilter fileFilter = new FileFilter() {
         public boolean accept(File file) {
             String tmp = file.getName().toLowerCase();
-            if (tmp.endsWith(".mp4")) {
+            if (tmp.endsWith(".3gp")) {
                 return true;
             }
             return false;
@@ -1541,9 +1465,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void OutXiumian() {
         IsXiumian = false;
         mLocationUtil.startLocate();
-        cameraSurfaceView.openCamera();
-        cameraSurfaceView.startPreview();
-        cameraSurfaceView.startRecord();
+        if(!cameraSurfaceView.isRecording) {
+            cameraSurfaceView.openCamera();
+            cameraSurfaceView.startPreview();
+            cameraSurfaceView.startRecord();
+        }
         try {
             mVideoServer.start();
         } catch (IOException e) {
@@ -1558,5 +1484,72 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
         }).start();
     }
+
+    private void IntoPengZhuang(){
+
+      final  long currenttime = System.currentTimeMillis();
+        IsPengZhuang = true;
+        if(IsXiumian){
+             PZZPCS=0;
+            cameraSurfaceView.openCamera();
+            cameraSurfaceView.startPreview();
+            cameraSurfaceView.capture();
+
+        }
+        else{
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    FileUtil.MoveFiletoDangerFile(currenttime, rootPath);
+                }
+            });
+            IsPengZhuang = false;
+        }
+    }
+      /* private int mX, mY, mZ;
+    private long lastaccelerometertimestamp = 0; //上次加速度不为0的时间
+    private int maxvalue;
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor == null) {
+            return;
+        }
+
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            int x = (int) event.values[0];
+            int y = (int) event.values[1];
+            int z = (int) event.values[2];
+            Calendar mCalendar = Calendar.getInstance();
+            long stamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
+            int px = Math.abs(mX - x);
+            int py = Math.abs(mY - y);
+            int pz = Math.abs(mZ - z);
+            maxvalue = FileUtil.getMaxValue(px, py, pz);
+           if (maxvalue > 3) {
+                lastaccelerometertimestamp = stamp;
+                //唤醒休眠
+                IsCarStop = false;
+                if (IsXiumian == true) {
+                    IsXiumian = false;
+                    final String xiumiantext = "*" + IMEI + ",18,"
+                            + 1 + "#";
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            client.send(xiumiantext);
+                        }
+                    }).start();
+                    StartRecord();
+                }
+            }
+            mX = x;
+            mY = y;
+            mZ = z;
+        }
+    }*/
+
+
+
 }
 

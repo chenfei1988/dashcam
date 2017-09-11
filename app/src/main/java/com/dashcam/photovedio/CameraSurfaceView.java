@@ -404,6 +404,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
      * ___________________________________以下为拍照模块______________________________________
      **/
     public void capture() {
+
         if (mCamera == null) return;
         mCamera.autoFocus(this);
     }
@@ -427,6 +428,45 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                     startPreview();
                     EventBus.getDefault().post(new RefreshEvent(1, photopath, ""));
                     Toast.makeText(context, "拍照成功", Toast.LENGTH_SHORT).show();
+                    if (MainActivity.IsPengZhuang) {
+                        if (MainActivity.IsBackCamera) {
+                            if (MainActivity.PZZPCS < 5) {
+                                MainActivity.PZZPCS=MainActivity.PZZPCS+1;
+                                try {
+                                    Thread.sleep(600);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                                capture();
+                            }
+                            else if(MainActivity.PZZPCS ==5){
+                                setDefaultCamera(false);
+                                MainActivity.PZZPCS = 0;
+                                MainActivity.IsBackCamera = false;
+                                capture();
+                            }
+                        }
+                        else{
+                            if (MainActivity.PZZPCS < 5) {
+                                MainActivity.PZZPCS=MainActivity.PZZPCS+1;
+                                try {
+                                    Thread.sleep(600);
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                                capture();
+                            }
+                            else if(MainActivity.PZZPCS ==5){
+                                setDefaultCamera(true);
+                                MainActivity.IsBackCamera = true;
+                                MainActivity.IsPengZhuang = false;
+                                closeCamera();
+                            }
+
+                        }
+
+                    }
+
 
 
                 }
@@ -466,8 +506,8 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
         mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-      //  mediaRecorder.setVideoSize(VIDEO_SIZE[0], VIDEO_SIZE[1]);
-        mediaRecorder.setVideoSize(720, 720);
+        mediaRecorder.setVideoSize(VIDEO_SIZE[0], VIDEO_SIZE[1]);
+       // mediaRecorder.setVideoSize(720, 720);
         //  mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_720P));
         mediaRecorder.setVideoFrameRate(40);
         mediaRecorder.setVideoEncodingBitRate(40 * 1024 * 1024);
@@ -620,7 +660,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         if (!dangerfile.exists()) {
             dangerfile.mkdirs();
         }
-        String vediopath = rootPath + "/vedio/" + name + ".mp4";
+        String vediopath = rootPath + "/vedio/" + name + ".3gp";
         return vediopath;
     }
     /*  private  String getTime() {
@@ -630,4 +670,11 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         return new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date(System.currentTimeMillis()));
     }
 
+    public void ResetCamara(){
+        if (mCamera == null) return;
+
+        mCamera.unlock();
+        mediaRecorder.reset();
+        mediaRecorder.setCamera(mCamera);
+    }
 }

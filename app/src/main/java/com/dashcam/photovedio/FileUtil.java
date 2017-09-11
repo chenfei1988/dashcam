@@ -340,6 +340,7 @@ public class FileUtil {
                     fs.write(buffer,  0,  byteread);
                 }
                 inStream.close();
+                fs.close();
             }
         }
         catch  (Exception  e)  {
