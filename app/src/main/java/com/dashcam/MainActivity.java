@@ -39,6 +39,10 @@ import android.widget.Toast;
 
 import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
+import com.baidu.speech.EventListener;
+import com.baidu.speech.EventManager;
+import com.baidu.speech.EventManagerFactory;
+import com.baidu.speech.asr.SpeechConstant;
 import com.dashcam.base.ApiInterface;
 import com.dashcam.base.DateUtils;
 import com.dashcam.base.FileInfo;
@@ -63,6 +67,7 @@ import com.lzy.okhttputils.callback.StringCallback;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -75,7 +80,9 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
@@ -89,7 +96,7 @@ import okhttp3.Response;
 
 import static com.dashcam.photovedio.FileUtil.getConnectedIP;
 
-public class MainActivity extends AppCompatActivity implements  BDLocationListener {
+public class MainActivity extends AppCompatActivity implements  BDLocationListener ,EventListener {
 
     @Bind(R.id.liuliang)
     TextView liuliang;
@@ -111,8 +118,8 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
     private static final String WIFI_HOTSPOT_SSID = "XiaoMa-";
     //  private SmsReceiver smsReceiver;
     private AudioManager audioMgr = null; // Audio管理器，用了控制音量
-    private int maxVolume = 50; // 最大音量值
-    private int curVolume = 20; // 当前音量值
+    private int maxVolume = 10; // 最大音量值
+    private int curVolume = 7; // 当前音量值
     private int stepVolume = 0; // 每次调整的音量幅度
     private int Carmertype = 1;//前后摄像头，1为前置摄像头，2为后置摄像头
     // private boolean IsStopRecord = false;
@@ -137,6 +144,8 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
     int Batterylevelbobao = 20;//电池电量
     public static  int PZZPCS = 0;//碰撞抓拍次数
     private long pengzhuangtimestamp = 0;
+
+    private EventManager wakeup;//语音唤醒
     @Override
     public void onReceiveLocation(BDLocation location) {
         if (location != null) {
@@ -150,6 +159,33 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
 
     @Override
     public void onConnectHotSpotMessage(String s, int i) {
+
+    }
+
+    //   EventListener  回调方法
+    @Override
+    public void onEvent(String name, String params, byte[] data, int offset, int length) {
+        String logTxt = "name: " + name;
+        if (params != null && !params.isEmpty()) {
+            try {
+                JSONObject jsonObject =new JSONObject(params);
+                String word =  jsonObject.getString("word");
+                if (word.equals("拍照")){
+
+                    if (IsXiumian == true) {
+                        cameraSurfaceView.openCamera();
+                        cameraSurfaceView.startPreview();
+                    }
+                    // (0 前置摄像头,1 后置摄像头)
+                    cameraSurfaceView.capture();
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            logTxt += " ;params :" + params;
+        } else if (data != null) {
+            logTxt += " ;data length=" + data.length;
+        }
 
     }
 
@@ -170,6 +206,7 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
                     break;*/
                 case 10:
                     //   IsStopRecord = false;
+                  //   start();
                     if (DateUtils.IsDay()) {
                         PlayMusic(MainActivity.this, 0);
                     } else {
@@ -249,6 +286,10 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
 
     private void initViews() {
 
+        //语音唤醒
+        wakeup = EventManagerFactory.create(this, "wp");
+        wakeup.registerListener(this); //  EventListener 中 onEvent方法
+       //
         cameraSurfaceView = (CameraSurfaceView) findViewById(R.id.cameraSurfaceView);
         ExecutorService exec = Executors.newCachedThreadPool();
         findViewById(R.id.intoxiumian).setOnClickListener(new View.OnClickListener() {
@@ -410,7 +451,7 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
                     OutXiumian();
                     break;
                 case "rock.intent.CHECK_NEW_SOFTWARE"://有更新的时候
-                    final String updatetext = "*" + IMEI + ",25"
+                    final String updatetext = "*" + IMEI + ",110"
                             + "#";
                     new Thread(new Runnable() {
                         @Override
@@ -420,7 +461,7 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
                     }).start();
                     break;
                 case "rock.intent.INSTALL.SUCCESS":
-                    final String updatesuccesstext = "*" + IMEI + ",26"
+                    final String updatesuccesstext = "*" + IMEI + ",111"
                             + "#";
                     new Thread(new Runnable() {
                         @Override
@@ -430,7 +471,7 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
                     }).start();
                     break;
                 case "rock.intent.UPDATE_FAIL":
-                    final String updatefailedtext = "*" + IMEI + ",27"
+                    final String updatefailedtext = "*" + IMEI + ",112"
                             + "#";
                     new Thread(new Runnable() {
                         @Override
@@ -547,10 +588,11 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
                     break;
                 case "94"://音量调节（加减）
                     if (types.length == 3) {
-                        curVolume = Integer.parseInt(types[2]);
-                        if (curVolume >= maxVolume) {
+                        curVolume = maxVolume * Integer.parseInt(types[2])/100;
+                       /* if (curVolume >= maxVolume) {
                             curVolume = maxVolume;
-                        }
+                        }*/
+                        SPUtils.put(this,"currentvolume",curVolume);
                         // 调整音量
                         adjustVolume();
                         final String volumetext = "*" + IMEI + ",7,"
@@ -728,8 +770,9 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
                     break;
                 case "81"://当前音量
                     int current = audioMgr.getStreamVolume(AudioManager.STREAM_MUSIC);
+
                     final String currentvolumetext = "*" + IMEI + ",20," +
-                            current + "#";
+                            current*10 + "#";
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
@@ -790,10 +833,23 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
                     if (types.length == 3) {
                         String isopen = types[2];
                         if (isopen.equals("0")) {
-                            audioMgr.setRingerMode(AudioManager.RINGER_MODE_SILENT);
+                            int currentvolume = audioMgr.getStreamVolume(AudioManager.STREAM_MUSIC);
+                            SPUtils.put(this,"currentvolume",currentvolume);
+                            curVolume =0;
+                            adjustVolume();
                         } else {
-                            audioMgr.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+                            int currentvolume = (int) SPUtils.get(this,"currentvolume",0);
+                            curVolume =currentvolume;
+                            adjustVolume();
                         }
+                        final String volumeswitch = "*" + IMEI + ",25," +
+                                "#";
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                client.send(volumeswitch);
+                            }
+                        }).start();
                     }
                     break;
                 case "76": //WINFI状态查询
@@ -803,12 +859,24 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
                         wifiapopen = "0";
                     }
                     String nameandpassword = FileSUtil.Getapwifinameandpassword(MainActivity.this);
-                    final String wifiapstate = "*" + IMEI + ",24," +
+                    final String wifiapstate = "*" + IMEI + ",25," +
                             wifiapopen + "," + nameandpassword + "#";
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
                             client.send(wifiapstate);
+                        }
+                    }).start();
+                    break;
+                case "75": //WINFI状态查询
+                    //  APK回复　*终端编号, 23, WINFI开关(0开, 1关), WIFI用户名, WIFI密码#
+                    int currentvolue = audioMgr.getStreamVolume(AudioManager.STREAM_MUSIC);
+                    final String volumestate = "*" + IMEI + ",26," +
+                            (currentvolue > 0?1:0)  +","+(int)(currentvolue*100/maxVolume)+ "#";
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            client.send(volumestate);
                         }
                     }).start();
                     break;
@@ -868,12 +936,17 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
             @Override
             public void onCompletion(MediaPlayer mp) {
                 // 在播放完毕被回调
+
                 if (type != 2) {
+                    Intent intent = new Intent();
+                    intent.setAction("com.dashcam.intent.START_RECORD");
+                    sendBroadcast(intent);
                     StartRecord();
                 }
             }
         });
         //    StartRecord();
+
     }
 
 
@@ -886,7 +959,7 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
             int temperature = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0);
             if (temperature > 680) {
 
-                final String xiumiantext = "*" + IMEI + ",77,"
+                final String xiumiantext = "*" + IMEI + ",24,"
                         + 3 + "#";
                 new Thread(new Runnable() {
                     @Override
@@ -904,7 +977,7 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
                     if (Batterylevel == Batterylevelbobao) {
                         if (Batterylevelbobao == 20) {
                             Batterylevelbobao = 10;
-                            final String xiumiantext = "*" + IMEI + ",77,"
+                            final String xiumiantext = "*" + IMEI + ",24,"
                                     + 1 + "#";
                             new Thread(new Runnable() {
                                 @Override
@@ -921,7 +994,7 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
                             }, 10000);//10秒
                         } else if (Batterylevelbobao == 10) {
                             Batterylevelbobao = 1;
-                            final String xiumiantext = "*" + IMEI + ",77,"
+                            final String xiumiantext = "*" + IMEI + ",24,"
                                     + 1 + "#";
                             new Thread(new Runnable() {
                                 @Override
@@ -937,7 +1010,7 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
                                 }
                             }, 10000);//10秒
                         } else if (Batterylevelbobao == 1) {
-                            final String xiumiantext = "*" + IMEI + ",77,"
+                            final String xiumiantext = "*" + IMEI + ",24,"
                                     + 2 + "#";
                             new Thread(new Runnable() {
                                 @Override
@@ -965,6 +1038,10 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
         cameraSurfaceView.closeCamera();
         mVideoServer.stop();
         task.cancel();
+        Intent intent = new Intent();
+        intent.setAction("com.dashcam.intent.STOP_RECORD");
+        sendBroadcast(intent);
+        wakeup.send(SpeechConstant.WAKEUP_STOP, "{}", null, 0, 0);
         clearTFtask.cancel();
         if (timer1 != null) {
             timer1.cancel();
@@ -1276,7 +1353,7 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
     public FileFilter fileFilter = new FileFilter() {
         public boolean accept(File file) {
             String tmp = file.getName().toLowerCase();
-            if (tmp.endsWith(".3gp")) {
+            if (tmp.endsWith(".mp4")) {
                 return true;
             }
             return false;
@@ -1320,8 +1397,8 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
             fileList.add(fileInfo);
         }
         Collections.sort(fileList, new FileComparator());//通过重写Comparator的实现类FileComparator来
-        if (fileList.size() > 40) {
-            for (int i = 0; i < 40; i++) {
+        if (fileList.size() > 8) {
+            for (int i = 0; i < 8; i++) {
                 File f = new File(fileList.get(i).getPath());
                 if (f.exists() && f.isFile()) {
                     f.delete();
@@ -1506,6 +1583,20 @@ public class MainActivity extends AppCompatActivity implements  BDLocationListen
             IsPengZhuang = false;
         }
     }
+
+    /**
+     * 测试参数填在这里
+     */
+    private void start() {
+
+        Map<String, Object> params = new LinkedHashMap<String, Object>();
+        params.put(SpeechConstant.ACCEPT_AUDIO_VOLUME, false);
+        params.put(SpeechConstant.WP_WORDS_FILE, "assets:///aidemo");
+        String json = null; // 这里可以替换成你需要测试的json
+        json = new JSONObject(params).toString();
+        wakeup.send(SpeechConstant.WAKEUP_START, json, null, 0, 0);
+    }
+
       /* private int mX, mY, mZ;
     private long lastaccelerometertimestamp = 0; //上次加速度不为0的时间
     private int maxvalue;

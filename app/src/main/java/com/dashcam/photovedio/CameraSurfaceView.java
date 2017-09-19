@@ -494,7 +494,6 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     public boolean startRecord(int maxDurationMs, MediaRecorder.OnInfoListener onInfoListener) {
         if (mCamera == null) return false;
-
         mCamera.unlock();
         mediaRecorder.reset();
         mediaRecorder.setCamera(mCamera);
@@ -507,10 +506,10 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
         mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         mediaRecorder.setVideoSize(VIDEO_SIZE[0], VIDEO_SIZE[1]);
-       // mediaRecorder.setVideoSize(720, 720);
+        // mediaRecorder.setVideoSize(720, 720);
         //  mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_720P));
-        mediaRecorder.setVideoFrameRate(40);
-        mediaRecorder.setVideoEncodingBitRate(40 * 1024 * 1024);
+        mediaRecorder.setVideoFrameRate(30);
+        mediaRecorder.setVideoEncodingBitRate(10 * 1024 * 1024);
        /* if (mOpenBackCamera) {
             mediaRecorder.setOrientationHint(90);
         } else {
@@ -523,12 +522,12 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             mediaRecorder.setMaxDuration(maxDurationMs);
             mediaRecorder.setOnInfoListener(onInfoListener);
         }*/
-     //   driveVideo = getMediaOutputPath();
-     //   mediaRecorder.setOutputFile(driveVideo.getPath());
+        //   driveVideo = getMediaOutputPath();
+        //   mediaRecorder.setOutputFile(driveVideo.getPath());
         currentVediopah =getMediaOutputPath();
         mediaRecorder.setOutputFile(currentVediopah);
         // 设置录制文件最长时间(10分钟)
-        mediaRecorder.setMaxDuration(1000 * 6);
+        mediaRecorder.setMaxDuration(1000 * 120);
         mediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
             @Override
             public void onInfo(MediaRecorder mr, int what, int extra) {
@@ -557,6 +556,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         return true;
 
     }
+
 
     public void stopRecord() {
         if (!isRecording) return;
@@ -660,7 +660,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         if (!dangerfile.exists()) {
             dangerfile.mkdirs();
         }
-        String vediopath = rootPath + "/vedio/" + name + ".3gp";
+        String vediopath = rootPath + "/vedio/" + name + ".mp4";
         return vediopath;
     }
     /*  private  String getTime() {

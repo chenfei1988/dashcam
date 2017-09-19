@@ -41,6 +41,20 @@
         <meta-data
             android:name="com.baidu.lbsapi.API_KEY"
             android:value="SXdUw32OYYeAP3WrmnrNlpiICuDjL7WF" />
+        <meta-data
+            android:name="com.baidu.speech.APP_ID"
+            android:value="10136595" />
+        <!-- 再次重复！！填写APP_ID 时请检查在官网的该应用内是否设置了包名。否则会导致唤醒词及离线功能无法使用。
+         本demo的包名是com.baidu.speech.recognizerdemo，在build.gradle文件中查看。 -->
+        <!-- 正式发布时，请替换成您自己的appId 本demo的appId会不定时下线 -->
+        <meta-data
+            android:name="com.baidu.speech.API_KEY"
+            android:value="BMWx6dx00iHiGnivjFjRUqlT" />
+        <meta-data
+            android:name="com.baidu.speech.SECRET_KEY"
+            android:value="oG8iLGwZlnQFIY1Fow9Wahzv2fC4Tp6W" />
+
+        <service android:name="com.baidu.speech.VoiceRecognitionService" android:exported="false" />
         <service
             android:name="com.baidu.location.f"
             android:enabled="true"
@@ -51,8 +65,8 @@
             android:screenOrientation="landscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="com.baidu.speech.recognizerdemo.intent.category.SAMPLE_CODE" />
             </intent-filter>
         </activity>
         <receiver android:name=".SmsReceiver">
