@@ -19,6 +19,8 @@ import android.view.View;
 import android.widget.Toast;
 
 import com.dashcam.MainActivity;
+import com.dashcam.base.DateUtil;
+import com.dashcam.base.FileSUtil;
 import com.dashcam.base.RefreshEvent;
 
 import org.greenrobot.eventbus.EventBus;
@@ -31,9 +33,8 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
-import id.zelory.compressor.Compressor;
+import static android.hardware.Camera.Parameters.FLASH_MODE_ON;
 
-import static android.hardware.Camera.Parameters.FOCUS_MODE_AUTO;
 
 public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Callback, Camera.AutoFocusCallback, View.OnClickListener {
 
@@ -60,8 +61,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     private String currentVediopah = "";
   //  private DriveVideo driveVideo;
     //public static String COMPRESSOR_DIR = Environment.getExternalStorageDirectory() + File.separator  + "photo" + File.separator + "photomini" + File.separator;
-    private String rootPath = "";
-
+    public static String rootPath = "";
     public CameraSurfaceView(Context context) {
         super(context);
         init(context);
@@ -239,17 +239,18 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     public   void startPreview() {
         if (mCamera == null) return;
         try {
+
             mParam = mCamera.getParameters();
             mParam.setPreviewFormat(previewformat);
-            mParam.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
-            mParam.setRotation(0);
+            mParam.setFlashMode(FLASH_MODE_ON);
+          //  mParam.setRotation(0);
             Camera.Size previewSize = CamParaUtil.getSize(mParam.getSupportedPreviewSizes(), 1000,
-                    mCamera.new Size(VIDEO_2160[1], VIDEO_2160[0]));
+                    mCamera.new Size(VIDEO_1080[1], VIDEO_1080[0]));
             mParam.setPreviewSize(previewSize.width, previewSize.height);
             int yuv_buffersize = previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewformat) / 8;
             previewBuffer = new byte[yuv_buffersize];
             Camera.Size pictureSize = CamParaUtil.getSize(mParam.getSupportedPictureSizes(), 1500,
-                    mCamera.new Size(VIDEO_2160[1], VIDEO_2160[0]));
+                    mCamera.new Size(VIDEO_1080[1], VIDEO_1080[0]));
             mParam.setPictureSize(pictureSize.width, pictureSize.height);
             if (CamParaUtil.isSupportedFormats(mParam.getSupportedPictureFormats(), ImageFormat.JPEG)) {
                 mParam.setPictureFormat(ImageFormat.JPEG);
@@ -412,18 +413,15 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     @Override
     public void onAutoFocus(boolean success, Camera camera) {
         try {
-            mCamera.takePicture(null, null, new Camera.PictureCallback() {
+            mCamera.takePicture(new Camera.ShutterCallback() {
+                @Override
+                public void onShutter() {
+
+                }
+            }, null, new Camera.PictureCallback() {
                 @Override
                 public void onPictureTaken(byte[] data, Camera camera) {
                     Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                  /*  Matrix matrix = new Matrix();
-                    if (mOpenBackCamera) {
-                        matrix.setRotate(90);
-                    } else {
-                        matrix.setRotate(270);
-                        matrix.postScale(-1, 1);
-                    }
-                    bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);*/
                     String photopath = saveBitmap(bitmap);
                     startPreview();
                     EventBus.getDefault().post(new RefreshEvent(1, photopath, ""));
@@ -431,32 +429,29 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                     if (MainActivity.IsPengZhuang) {
                         if (MainActivity.IsBackCamera) {
                             if (MainActivity.PZZPCS < 5) {
-                                MainActivity.PZZPCS=MainActivity.PZZPCS+1;
+                                MainActivity.PZZPCS = MainActivity.PZZPCS + 1;
                                 try {
                                     Thread.sleep(600);
                                 } catch (InterruptedException e) {
                                     e.printStackTrace();
                                 }
                                 capture();
-                            }
-                            else if(MainActivity.PZZPCS ==5){
+                            } else if (MainActivity.PZZPCS == 5) {
                                 setDefaultCamera(false);
                                 MainActivity.PZZPCS = 0;
                                 MainActivity.IsBackCamera = false;
                                 capture();
                             }
-                        }
-                        else{
+                        } else {
                             if (MainActivity.PZZPCS < 5) {
-                                MainActivity.PZZPCS=MainActivity.PZZPCS+1;
+                                MainActivity.PZZPCS = MainActivity.PZZPCS + 1;
                                 try {
                                     Thread.sleep(600);
                                 } catch (InterruptedException e) {
                                     e.printStackTrace();
                                 }
                                 capture();
-                            }
-                            else if(MainActivity.PZZPCS ==5){
+                            } else if (MainActivity.PZZPCS == 5) {
                                 setDefaultCamera(true);
                                 MainActivity.IsBackCamera = true;
                                 MainActivity.IsPengZhuang = false;
@@ -466,7 +461,6 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                         }
 
                     }
-
 
 
                 }
@@ -527,7 +521,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         currentVediopah =getMediaOutputPath();
         mediaRecorder.setOutputFile(currentVediopah);
         // 设置录制文件最长时间(10分钟)
-        mediaRecorder.setMaxDuration(1000 * 120);
+        mediaRecorder.setMaxDuration(1000 * 6);
         mediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
             @Override
             public void onInfo(MediaRecorder mr, int what, int extra) {
@@ -608,6 +602,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     //保存照片
     public String saveBitmap(Bitmap b) {
+        b = FileSUtil.drawTextToBitmap(context,b, DateUtil.getCurrentTimeFormat()+"  "+ MainActivity.GPSSTR);
         String jpegName = rootPath + "/photo/" + getTime() + ".jpg";
         File file = new File(rootPath + "/photo");
         if (!file.exists()) {

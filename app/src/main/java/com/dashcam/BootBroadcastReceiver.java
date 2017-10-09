@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
 
+import com.dashcam.base.CrashHandler;
+
 /**
  * 基本功能：开机自动启动APP
  * 创建：chenfei
@@ -17,6 +19,11 @@ public class BootBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent.getAction().equals(ACTION)) {
+          /*  try {
+                CrashHandler.getInstance().writeFile("");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }*/
             final Intent mainActivityIntent = new Intent(context, MainActivity.class);  // 要启动的Activity
             mainActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             final Context mContext = context;
@@ -24,7 +31,7 @@ public class BootBroadcastReceiver extends BroadcastReceiver {
                 public void run() {
                     mContext.startActivity(mainActivityIntent);
                 }
-            }, 3000);
+            }, 20000);
         }
     }
 }

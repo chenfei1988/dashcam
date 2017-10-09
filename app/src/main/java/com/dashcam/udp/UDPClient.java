@@ -4,6 +4,8 @@ import android.content.Intent;
 import android.util.Log;
 
 import com.dashcam.MainActivity;
+import com.dashcam.base.DateUtil;
+import com.itgoyo.logtofilelibrary.LogToFileUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -47,7 +49,7 @@ public class UDPClient implements Runnable {
     }
 
     //发送消息
-    public String send(String msgSend) {
+    public boolean send(String msgSend) {
 
         InetAddress hostAddress = null;
 
@@ -55,7 +57,9 @@ public class UDPClient implements Runnable {
             hostAddress = InetAddress.getByName(hostIp);
         } catch (UnknownHostException e) {
             Log.i("udpClient","未找到服务器");
+            LogToFileUtils.write("udpClient,未找到服务器"+e.toString());//写入日志
             e.printStackTrace();
+            return false;
         }
 
 /*        try {
@@ -83,9 +87,11 @@ public class UDPClient implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
             Log.i("udpClient","发送失败");
+            LogToFileUtils.write("udpClient,发送失败"+e.toString());//写入日志
+            return false;
         }
-     //   socket.close();
-        return msgSend;
+
+        return true;
     }
 
     @Override
@@ -95,6 +101,7 @@ public class UDPClient implements Runnable {
             socket = new DatagramSocket();
             socket.setSoTimeout(3000);
         } catch (SocketException e) {
+            LogToFileUtils.write("udpClient,建立接收数据报失败"+e.toString());//写入日志
             Log.i("udpClient","建立接收数据报失败");
             e.printStackTrace();
         }
@@ -102,6 +109,7 @@ public class UDPClient implements Runnable {
         while (udpLife){
             try {
                 Log.i("udpClient", "UDP监听");
+               // LogToFileUtils.write(DateUtil.getCurrentTimeFormat()+"udpClient, UDP监听");//写入日志
                 socket.receive(packetRcv);
                 String RcvMsg = new String(packetRcv.getData(),packetRcv.getOffset(),packetRcv.getLength());
                 //将收到的消息发给主界面
@@ -117,6 +125,7 @@ public class UDPClient implements Runnable {
         }
 
         Log.i("udpClient","UDP监听关闭");
+        LogToFileUtils.write("udpClient, UDP监听关闭");//写入日志
         socket.close();
     }
 }

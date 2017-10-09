@@ -39,7 +39,7 @@ public class CrashHandler implements UncaughtExceptionHandler {
     // 系统默认的UncaughtException处理类
     private Thread.UncaughtExceptionHandler mDefaultHandler;
 
-    private static CrashHandler instance = new CrashHandler();
+    public static CrashHandler instance = new CrashHandler();
     private Context mContext;
 
     // 用来存储设备信息和异常信息
@@ -197,7 +197,7 @@ public class CrashHandler implements UncaughtExceptionHandler {
         return null;
     }
 
-    private String writeFile(String sb) throws Exception {
+    public String writeFile(String sb) throws Exception {
         String time = formatter.format(new Date());
         String fileName = "crash-" + time + ".txt";
         if (FileSUtil.hasSdcard()) {

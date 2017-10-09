@@ -85,7 +85,15 @@ public final class DateUtil {
     public static String getDateTimeFormat(Date date) {
         return dateSimpleFormat(date, defaultDateTimeFormat.get());
     }
-
+    /**
+     * 将date转成yyyy-MM-dd HH:mm:ss字符串
+     * <br>
+     * @param
+     * @return  yyyy-MM-dd HH:mm:ss
+     */
+    public static String getCurrentTimeFormat() {
+        return dateSimpleFormat(new Date(), defaultDateTimeFormat.get());
+    }
     /**
      * 将年月日的int转成yyyy-MM-dd的字符串
      * @param year 年
@@ -294,7 +302,7 @@ public final class DateUtil {
     /**
      * 取得给定日期加上一定天数后的日期对象.
      *
-     * @param date 给定的日期对象
+     * @param  给定的日期对象
      * @param amount 需要添加的天数，如果是向前的天数，使用负数就可以.
      * @return Date 加上一定天数以后的Date对象.
      */

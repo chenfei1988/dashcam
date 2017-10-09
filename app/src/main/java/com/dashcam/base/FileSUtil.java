@@ -18,6 +18,14 @@ import java.util.Collections;
 import java.util.List;
 
 import android.content.Context;
+import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.Rect;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiManager;
 import android.os.Environment;
@@ -637,5 +645,35 @@ public final class FileSUtil {
             e.printStackTrace();
         }
         return ",";
+    }
+    public static Bitmap drawTextToBitmap(Context gContext,
+                                   Bitmap bitmap,
+                                   String gText) {
+        Resources resources = gContext.getResources();
+        float scale = resources.getDisplayMetrics().density;
+
+        android.graphics.Bitmap.Config bitmapConfig =
+                bitmap.getConfig();
+        // set default bitmap config if none
+        if(bitmapConfig == null) {
+            bitmapConfig = android.graphics.Bitmap.Config.ARGB_8888;
+        }
+        // resource bitmaps are imutable,
+        // so we need to convert it to mutable one
+        bitmap = bitmap.copy(bitmapConfig, true);
+        Canvas canvas = new Canvas(bitmap);
+        // new antialised Paint
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        // text color - #3D3D3D
+        paint.setColor(Color.RED);
+        paint.setTextSize((int) (18 * scale));
+        paint.setDither(true); //获取跟清晰的图像采样
+        paint.setFilterBitmap(true);//过滤一些
+        Rect bounds = new Rect();
+        paint.getTextBounds(gText, 0, gText.length(), bounds);
+        int x = 30;
+        int y = 30;
+        canvas.drawText(gText, x * scale, y * scale, paint);
+        return bitmap;
     }
 }

@@ -21,6 +21,15 @@
         android:id="@+id/cameraSurfaceView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
+        <TextView
+            android:id="@+id/iszaixian"
+            android:layout_width="match_parent"
+            android:layout_height="45dp"
+            android:gravity="center"
+            android:text="在线"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/holo_red_dark" />
     <TextView
         android:id="@+id/liuliang"
         android:layout_width="match_parent"
