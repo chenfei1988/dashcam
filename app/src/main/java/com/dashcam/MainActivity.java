@@ -235,6 +235,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         registerReceiver(mbatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         BindReceiver();
         DeleteOldVedioFile();
+
         //  setBrightnessMode();//开启Wifi
 
     }
@@ -242,12 +243,13 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     private void initData() {
         CheckPermissionsUtil checkPermissionsUtil = new CheckPermissionsUtil(this);
         checkPermissionsUtil.requestAllPermission(this);
-      /*   liuliang.setText(0+"");//C类问题先不管
-        if (hasPermissionToReadNetworkStats()) {
+        liuliang.setText(0+"");//C类问题先不管
+       /* if (hasPermissionToReadNetworkStats()) {
             NetworkStatsManager networkStatsManager = (NetworkStatsManager) getSystemService(NETWORK_STATS_SERVICE);
             long liangliangbyte = new NetworkStatsHelper(networkStatsManager).getAllMonthMobile(this);
             liuliang.setText((int)(liangliangbyte/1024/1024)+"");
         }*/
+
         phonenumber = new PhoneInfoUtils(context).getNativePhoneNumber();
         if (phonenumber == null) {
             phonenumber = "";
@@ -319,7 +321,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         }*/
         if (timer3 == null) {
             timer3 = new Timer();
-            timer3.schedule(clearTFtask, 3000, 1000 * 60 * 2);
+            timer3.schedule(clearTFtask, 3000, 1000 * 60);
         }
       /*  smsReceiver = new SmsReceiver();
         IntentFilter filter = new IntentFilter("android.provider.Telephony.SMS_RECEIVED");
@@ -358,6 +360,12 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     TimerTask clearTFtask = new TimerTask() {
         @Override
         public void run() {
+              /*
+        给底层发送广播，获取流量
+         */
+            Intent intent = new Intent();
+            intent.setAction("android.intent.REQUEST_DATA_USAGE");
+            sendBroadcast(intent);
             DeleteOldVedioFile();
         }
     };
@@ -430,6 +438,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         IntentFilter intentFilter6 = new IntentFilter("rock.intent.UPDATE_FAIL");//升级失败的广播
         IntentFilter intentFilter7 = new IntentFilter("android.intent.KEYCODE_F11");//升级失败的广播
         IntentFilter intentFilter8 = new IntentFilter("android.intent.POWER_KEY_SHUTTER");//电源抓拍键
+        IntentFilter intentFilter9 = new IntentFilter("android.intent.SEND_DATA_USAGE");//电源抓拍键
         registerReceiver(myBroadcastReceiver, intentFilter1);
         registerReceiver(myBroadcastReceiver, intentFilter2);
         registerReceiver(myBroadcastReceiver, intentFilter3);
@@ -438,6 +447,13 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         registerReceiver(myBroadcastReceiver, intentFilter6);
         registerReceiver(myBroadcastReceiver, intentFilter7);
         registerReceiver(myBroadcastReceiver, intentFilter8);
+        registerReceiver(myBroadcastReceiver, intentFilter9);
+        /*
+        给底层发送广播，获取流量
+         */
+        Intent intent = new Intent();
+        intent.setAction("android.intent.REQUEST_DATA_USAGE");
+        sendBroadcast(intent);
 
     }
 
@@ -505,6 +521,18 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     } else {
                         cameraSurfaceView.capture();
                     }
+                    break;
+                case "android.intent.SEND_DATA_USAGE":
+                    int bit = intent.getIntExtra("data_usage",0);
+                    liuliang.setText(bit/1024/1024+"");
+                    final String sendliuliangtext = "*" + IMEI + ",5,"
+                            + liuliang.getText().toString().trim() + "#";
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            client.send(sendliuliangtext);
+                        }
+                    }).start();
                     break;
                 default:
                     break;
@@ -592,15 +620,10 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     }
 
                     break;
-                case "96"://剩余流量
-                    final String sendliuliangtext = "*" + IMEI + ",5,"
-                            + liuliang.getText().toString().trim() + "#";
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            client.send(sendliuliangtext);
-                        }
-                    }).start();
+                case "96"://剩余流量  发送广播给底层，由底层来操作
+                    Intent intent = new Intent();
+                    intent.setAction("android.intent.REQUEST_DATA_USAGE");
+                    sendBroadcast(intent);
                     break;
                 case "95"://费用查询
                     FileUtil.sendSMS("10086", "cxye");
