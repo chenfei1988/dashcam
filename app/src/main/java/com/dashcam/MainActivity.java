@@ -375,13 +375,18 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     public void onEvnet(RefreshEvent refresh) {
         if (refresh.getYwlx() == 1) {  //上传图片
             savePicture(refresh.getPhotopath());
-            if (!IsBackCamera && !IsPengZhuang) {
-                //  cameraSurfaceView.stopRecord();
-                cameraSurfaceView.setDefaultCamera(true);
-                IsBackCamera = true;
-                //  IsStopRecord = false;
+            if(!IsPengZhuang) {
+                if (!IsBackCamera ) {
+                    //  cameraSurfaceView.stopRecord();
+                    cameraSurfaceView.setDefaultCamera(true);
+                    IsBackCamera = true;
+                    //  IsStopRecord = false;
+                }
                 if (IsXiumian) {
                     cameraSurfaceView.closeCamera();
+                    Intent intent = new Intent();
+                    intent.setAction("android.intent.TAKE_CAPTURE");
+                    sendBroadcast(intent);
                 } else {
                     cameraSurfaceView.startRecord();
                 }
@@ -405,13 +410,17 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 cameraSurfaceView.stopRecord();
                 cameraSurfaceView.setDefaultCamera(true);
                 IsBackCamera = true;
-                if (IsXiumian) {
-                    cameraSurfaceView.closeCamera();
-                    IntoXiumian();
-                } else {
-                    //   IsStopRecord = false;
-                    cameraSurfaceView.startRecord();
-                }
+
+            }
+            if (IsXiumian) {
+                cameraSurfaceView.closeCamera();
+                IntoXiumian();
+                Intent intent = new Intent();
+                intent.setAction("android.intent.TAKE_CAPTURE");
+                sendBroadcast(intent);
+            } else {
+                //   IsStopRecord = false;
+                cameraSurfaceView.startRecord();
             }
          /*   String sendtext = "*" + IMEI + ",8,"
                     + refresh.getPhotopath() + "#";
@@ -524,7 +533,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     break;
                 case "android.intent.SEND_DATA_USAGE":
                     int bit = intent.getIntExtra("data_usage",0);
-                    liuliang.setText(bit/1024/1024+"");
+                    liuliang.setText(bit+"");
                     final String sendliuliangtext = "*" + IMEI + ",5,"
                             + liuliang.getText().toString().trim() + "#";
                     new Thread(new Runnable() {
