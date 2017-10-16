@@ -46,9 +46,9 @@ public class MyAPP extends Application {
         //以下都不是必须的，根据需要自行选择
         OkHttpUtils.getInstance()//
                 .debug("OkHttpUtils")                                              //是否打开调试
-                .setConnectTimeout(60000)               //全局的连接超时时间
-                .setReadTimeOut(60000)                  //全局的读取超时时间
-                .setWriteTimeOut(60000)
+                .setConnectTimeout(120000)               //全局的连接超时时间
+                .setReadTimeOut(120000)                  //全局的读取超时时间
+                .setWriteTimeOut(120000)
                 //全局的写入超时时间
                 .addInterceptor(new RetryIntercepter())
 //                .setCookieStore(new MemoryCookieStore())                           //cookie使用内存缓存（app退出后，cookie消失）

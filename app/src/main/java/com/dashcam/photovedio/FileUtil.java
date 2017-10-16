@@ -312,7 +312,7 @@ public class FileUtil {
         for (int i = 0; i < files.length; i++) {
             File file = files[i];
              long filetime = file.lastModified();
-            if (Math.abs(filetime-currenttime)<1000*60){
+            if (Math.abs(filetime-currenttime)<3000*60){
                 copyFile(file.getPath(),rootpath+"/dangervedio/"+file.getName());
             }
         }

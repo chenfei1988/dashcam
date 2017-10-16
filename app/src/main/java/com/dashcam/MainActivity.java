@@ -10,6 +10,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
@@ -129,11 +130,10 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     public static boolean IsBackCamera = true;
     public static boolean IsZhualu = false;//是否在抓录视频
     public static boolean IsPengZhuang = false;//是否是碰撞
-     int cishu = 0;//上传3次，不成功退出
+    int cishu = 0;//上传3次，不成功退出
     int Batterylevelbobao = 20;//电池电量
-    public static int PZZPCS = 0;//碰撞抓拍次数
     private long pengzhuangtimestamp = 0;
-  //  private EventManager wakeup;//语音唤醒
+    //  private EventManager wakeup;//语音唤醒
     int zaixianflag = 0;
 
     @Override
@@ -142,19 +142,18 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             if (location.getLongitude() > 1 && location.getLatitude() > 1) {
 
                 GPSSTR = location.getLongitude() + "," + location.getLatitude() + "," + location.getSpeed() + "," + location.getDirection();
-                LogToFileUtils.write( GPSSTR);//写入日志
+                LogToFileUtils.write(GPSSTR);//写入日志
             }
             String sendtext = "*" + IMEI + ",1,"
                     + GPSSTR + "#";
             if (!client.send(sendtext)) {
-                zaixianflag =zaixianflag+1;
-                if (zaixianflag>8){
+                zaixianflag = zaixianflag + 1;
+                if (zaixianflag > 8) {
                     iszaixian.setText("离线");
                 }
-            }
-            else{
+            } else {
                 iszaixian.setText("在线");
-                zaixianflag =0;
+                zaixianflag = 0;
             }
 
 
@@ -243,7 +242,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     private void initData() {
         CheckPermissionsUtil checkPermissionsUtil = new CheckPermissionsUtil(this);
         checkPermissionsUtil.requestAllPermission(this);
-        liuliang.setText(0+"");//C类问题先不管
+        liuliang.setText(0 + "");//C类问题先不管
        /* if (hasPermissionToReadNetworkStats()) {
             NetworkStatsManager networkStatsManager = (NetworkStatsManager) getSystemService(NETWORK_STATS_SERVICE);
             long liangliangbyte = new NetworkStatsHelper(networkStatsManager).getAllMonthMobile(this);
@@ -264,6 +263,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         //videoDb = new DriveVideoDbHelper(this);
         audioMgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        audioMgr.setParameters("SET_MIC_CHOOSE=2");
         // 获取最大音乐音量
         maxVolume = audioMgr.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         // 初始化音量大概为最大音量的1/2
@@ -293,8 +293,8 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     private void initViews() {
 
         //语音唤醒
-    //    wakeup = EventManagerFactory.create(this, "wp");
-     //   wakeup.registerListener(this); //  EventListener 中 onEvent方法
+        //    wakeup = EventManagerFactory.create(this, "wp");
+        //   wakeup.registerListener(this); //  EventListener 中 onEvent方法
         //
         cameraSurfaceView = (CameraSurfaceView) findViewById(R.id.cameraSurfaceView);
         ExecutorService exec = Executors.newCachedThreadPool();
@@ -375,8 +375,8 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     public void onEvnet(RefreshEvent refresh) {
         if (refresh.getYwlx() == 1) {  //上传图片
             savePicture(refresh.getPhotopath());
-            if(!IsPengZhuang) {
-                if (!IsBackCamera ) {
+            if (!IsPengZhuang) {
+                if (!IsBackCamera) {
                     //  cameraSurfaceView.stopRecord();
                     cameraSurfaceView.setDefaultCamera(true);
                     IsBackCamera = true;
@@ -406,12 +406,12 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             String vediopath = refresh.getPhotopath();
             saveFile(vediopath, IsZhualu);
             IsZhualu = false;
+            //  cameraSurfaceView.stopRecord();
             if (!IsBackCamera) {
-                cameraSurfaceView.stopRecord();
                 cameraSurfaceView.setDefaultCamera(true);
                 IsBackCamera = true;
-
             }
+
             if (IsXiumian) {
                 cameraSurfaceView.closeCamera();
                 IntoXiumian();
@@ -420,11 +420,11 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 sendBroadcast(intent);
             } else {
                 //   IsStopRecord = false;
+                CameraSurfaceView.Recordtime = 60 * 1000 * 3;
+                CameraSurfaceView.VIDEO_SIZE = new int[]{1280, 720};
+                CameraSurfaceView.mencode = MediaRecorder.VideoEncoder.MPEG_4_SP;
                 cameraSurfaceView.startRecord();
             }
-         /*   String sendtext = "*" + IMEI + ",8,"
-                    + refresh.getPhotopath() + "#";
-            client.send(sendtext);*/
         }
     }
 
@@ -532,8 +532,8 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     }
                     break;
                 case "android.intent.SEND_DATA_USAGE":
-                    int bit = intent.getIntExtra("data_usage",0);
-                    liuliang.setText(bit+"");
+                    int bit = intent.getIntExtra("data_usage", 0);
+                    liuliang.setText(bit + "");
                     final String sendliuliangtext = "*" + IMEI + ",5,"
                             + liuliang.getText().toString().trim() + "#";
                     new Thread(new Runnable() {
@@ -859,25 +859,21 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         if (IsXiumian) {
                             cameraSurfaceView.openCamera();
                             cameraSurfaceView.startPreview();
+                        } else {
+                            cameraSurfaceView.stopRecord();
                         }
-                        if (lushu.equals("0")) {
-                            IsZhualu = true;
-                            if (IsXiumian) {
-                                cameraSurfaceView.startRecord();
-                            }
-                            //  cameraSurfaceView.capture();
-                        } else if (lushu.equals("1")) {
-                            //     IsStopRecord = true;
+                        IsZhualu = true;
+                        CameraSurfaceView.Recordtime = 1000 * 6;
+                        CameraSurfaceView.VIDEO_SIZE = new int[]{640, 480};
+                        CameraSurfaceView.mencode = MediaRecorder.VideoEncoder.H264;
+                        if (lushu.equals("1")) {
                             try {
-                                cameraSurfaceView.stopRecord();
                                 cameraSurfaceView.setDefaultCamera(false);
                                 IsBackCamera = false;
-                                IsZhualu = true;
-                                StartRecord();
                             } catch (Exception e) {
-
                             }
                         }
+                        StartRecord();
                     }
                     break;
                 case "79":
@@ -1012,9 +1008,6 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 // 在播放完毕被回调
 
                 if (type != 2) {
-                    Intent intent = new Intent();
-                    intent.setAction("com.dashcam.intent.START_RECORD");
-                    sendBroadcast(intent);
                     StartRecord();
                 }
             }
@@ -1031,7 +1024,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             int temperature = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0);
-            if (temperature  == 650) {
+            if (temperature == 650) {
                 final String xiumiantext = "*" + IMEI + ",24,"
                         + 3 + "#";
                 new Thread(new Runnable() {
@@ -1041,7 +1034,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     }
                 }).start();
             }
-            if (temperature  == 600) {
+            if (temperature == 600) {
                 final String xiumiantext = "*" + IMEI + ",24,"
                         + 3 + "#";
                 new Thread(new Runnable() {
@@ -1104,6 +1097,14 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         }
 
                     }
+                } else {
+                    if (IsXiumian == true) {
+                        cameraSurfaceView.openCamera();
+                        cameraSurfaceView.startPreview();
+                    }
+                    // (0 前置摄像头,1 后置摄像头)
+                    cameraSurfaceView.capture();
+
                 }
             }
         }
@@ -1124,7 +1125,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         Intent intent = new Intent();
         intent.setAction("com.dashcam.intent.STOP_RECORD");
         sendBroadcast(intent);
-      //  wakeup.send(SpeechConstant.WAKEUP_STOP, "{}", null, 0, 0);
+        //  wakeup.send(SpeechConstant.WAKEUP_STOP, "{}", null, 0, 0);
         clearTFtask.cancel();
         if (timer1 != null) {
             timer1.cancel();
@@ -1303,7 +1304,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                                      LogToFileUtils.write(s);//写入日志
                                      JSONObject mJsonObject = new JSONObject(s);
                                      if (mJsonObject.getBoolean("success")) {
-                                              cishu = 0;
+                                         cishu = 0;
                                          String backurl = mJsonObject.getString("msg");
                                          //    backurl = backurl.substring(0, backurl.length() - 1);
                                          if (IsZhualu) {
@@ -1336,10 +1337,10 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                              @Override
                              public void onError(boolean isFromCache, Call call, @Nullable Response
                                      response, @Nullable Exception e) {
-                                 LogToFileUtils.write( e.toString());//写入日志
+                                 LogToFileUtils.write(e.toString());//写入日志
                                  cishu = cishu + 1;
                                  if (cishu < 3) {
-                                     saveFile(path,IsZhualu);
+                                     saveFile(path, IsZhualu);
                                  }
                                  super.onError(isFromCache, call, response, e);
 
@@ -1361,10 +1362,10 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                              public void onResponse(boolean isFromCache, String s, Request
                                      request, @Nullable Response response) {
                                  try {
-                                     LogToFileUtils.write( s);//写入日志
+                                     LogToFileUtils.write(s);//写入日志
                                      JSONObject mJsonObject = new JSONObject(s);
                                      if (mJsonObject.getBoolean("success")) {
-                                              cishu = 0;
+                                         cishu = 0;
                                          InitDeleteShanchu();
                                          String backurl = mJsonObject.getString("msg");
                                          backurl = "*" + IMEI + ",2," + backurl + "#";
@@ -1392,7 +1393,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                              @Override
                              public void onError(boolean isFromCache, Call call, @Nullable Response
                                      response, @Nullable Exception e) {
-                                cishu = cishu + 1;
+                                 cishu = cishu + 1;
                                  if (cishu < 3) {
                                      savePicture(path);
                                  }
@@ -1447,7 +1448,6 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         if (!fileroot.exists()) {
             return;
         }
-
         //取出文件列表：
         StringBuilder builder = new StringBuilder();
         final File[] files = fileroot.listFiles();
@@ -1461,13 +1461,20 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             fileList.add(fileInfo);
         }
         Collections.sort(fileList, new FileComparator());//通过重写Comparator的实现类FileComparator来
-        if (fileList.size() > 100) {
-            for (int i = 0; i < 100; i++) {
+        if (fileList.size() > 8) {
+            for (int i = 0; i < 8; i++) {
                 File f = new File(fileList.get(i).getPath());
                 if (f.exists() && f.isFile()) {
                     f.delete();
                 }
             }
+        }
+        float sdFree = FileUtil.getSDAvailableSize(rootPath);
+        float sdTotal = FileUtil.getSDTotalSize(rootPath);
+        int intSdFree = (int) sdFree;
+        if (sdFree < sdTotal * 0.2
+                && intSdFree < 2000) {
+            DeleteFile();
         }
     }
 
@@ -1629,18 +1636,29 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         final long currenttime = System.currentTimeMillis();
         IsPengZhuang = true;
         if (IsXiumian) {
-            PZZPCS = 0;
             cameraSurfaceView.openCamera();
             cameraSurfaceView.startPreview();
             cameraSurfaceView.capture();
 
         } else {
-            new Thread(new Runnable() {
+            Timer timer = new Timer();//实例化Timer类
+            timer.schedule(new TimerTask() {
+                public void run() {
+                    cameraSurfaceView.stopRecord();
+                    cameraSurfaceView.startRecord();
+                    FileUtil.MoveFiletoDangerFile(currenttime, rootPath);
+                    this.cancel();
+                }
+            }, 3000);//3秒
+
+         /*   new Thread(new Runnable() {
                 @Override
                 public void run() {
+                    cameraSurfaceView.stopRecord();
+                    cameraSurfaceView.startRecord();
                     FileUtil.MoveFiletoDangerFile(currenttime, rootPath);
                 }
-            });
+            });*/
             IsPengZhuang = false;
         }
     }
@@ -1648,58 +1666,56 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     /**
      * 测试参数填在这里
 
-    private void start() {
+     private void start() {
 
-        Map<String, Object> params = new LinkedHashMap<String, Object>();
-        params.put(SpeechConstant.ACCEPT_AUDIO_VOLUME, false);
-        params.put(SpeechConstant.WP_WORDS_FILE, "assets:///aidemo");
-        String json = null; // 这里可以替换成你需要测试的json
-        json = new JSONObject(params).toString();
-        wakeup.send(SpeechConstant.WAKEUP_START, json, null, 0, 0);
-    }
+     Map<String, Object> params = new LinkedHashMap<String, Object>();
+     params.put(SpeechConstant.ACCEPT_AUDIO_VOLUME, false);
+     params.put(SpeechConstant.WP_WORDS_FILE, "assets:///aidemo");
+     String json = null; // 这里可以替换成你需要测试的json
+     json = new JSONObject(params).toString();
+     wakeup.send(SpeechConstant.WAKEUP_START, json, null, 0, 0);
+     }
 
-      /* private int mX, mY, mZ;
-    private long lastaccelerometertimestamp = 0; //上次加速度不为0的时间
-    private int maxvalue;
+     /* private int mX, mY, mZ;
+     private long lastaccelerometertimestamp = 0; //上次加速度不为0的时间
+     private int maxvalue;
 
-    @Override
-    public void onSensorChanged(SensorEvent event) {
-        if (event.sensor == null) {
-            return;
-        }
+     @Override public void onSensorChanged(SensorEvent event) {
+     if (event.sensor == null) {
+     return;
+     }
 
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            int x = (int) event.values[0];
-            int y = (int) event.values[1];
-            int z = (int) event.values[2];
-            Calendar mCalendar = Calendar.getInstance();
-            long stamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
-            int px = Math.abs(mX - x);
-            int py = Math.abs(mY - y);
-            int pz = Math.abs(mZ - z);
-            maxvalue = FileUtil.getMaxValue(px, py, pz);
-           if (maxvalue > 3) {
-                lastaccelerometertimestamp = stamp;
-                //唤醒休眠
-                IsCarStop = false;
-                if (IsXiumian == true) {
-                    IsXiumian = false;
-                    final String xiumiantext = "*" + IMEI + ",18,"
-                            + 1 + "#";
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            client.send(xiumiantext);
-                        }
-                    }).start();
-                    StartRecord();
-                }
-            }
-            mX = x;
-            mY = y;
-            mZ = z;
-        }
-    }*/
+     if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+     int x = (int) event.values[0];
+     int y = (int) event.values[1];
+     int z = (int) event.values[2];
+     Calendar mCalendar = Calendar.getInstance();
+     long stamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
+     int px = Math.abs(mX - x);
+     int py = Math.abs(mY - y);
+     int pz = Math.abs(mZ - z);
+     maxvalue = FileUtil.getMaxValue(px, py, pz);
+     if (maxvalue > 3) {
+     lastaccelerometertimestamp = stamp;
+     //唤醒休眠
+     IsCarStop = false;
+     if (IsXiumian == true) {
+     IsXiumian = false;
+     final String xiumiantext = "*" + IMEI + ",18,"
+     + 1 + "#";
+     new Thread(new Runnable() {
+     @Override public void run() {
+     client.send(xiumiantext);
+     }
+     }).start();
+     StartRecord();
+     }
+     }
+     mX = x;
+     mY = y;
+     mZ = z;
+     }
+     }*/
 
 
 }

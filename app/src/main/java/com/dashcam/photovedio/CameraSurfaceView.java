@@ -1,6 +1,7 @@
 package com.dashcam.photovedio;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -33,17 +34,18 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
-import static android.hardware.Camera.Parameters.FLASH_MODE_ON;
+import static android.hardware.Camera.Parameters.FLASH_MODE_OFF;
 
 
 public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Callback, Camera.AutoFocusCallback, View.OnClickListener {
 
-    protected static final int[] VIDEO_320 = {320, 240};
-    protected static final int[] VIDEO_480 = {640, 480};
-    protected static final int[] VIDEO_720 = {1280, 720};
+    /* protected static final int[] VIDEO_320 = {320, 240};
+     protected static final int[] VIDEO_480 = {640, 480};
+     protected static final int[] VIDEO_720 = {1280, 720};
+
+     protected static final int[] VIDEO_2160 = {3600, 2160};*/
     protected static final int[] VIDEO_1080 = {1920, 1080};
-    protected static final int[] VIDEO_2160 = {3600, 2160};
-    public static int[] VIDEO_SIZE = {1280, 720};
+
     private int screenOritation = Configuration.ORIENTATION_PORTRAIT;
     private boolean mOpenBackCamera = true;
     private SurfaceHolder mSurfaceHolder;
@@ -57,11 +59,15 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     protected int previewformat = ImageFormat.NV21;
     Context context;
     private long starttimelamp = 0;
-//    Compressor mCompressor;
+    //    Compressor mCompressor;
     private String currentVediopah = "";
-  //  private DriveVideo driveVideo;
+    //  private DriveVideo driveVideo;
     //public static String COMPRESSOR_DIR = Environment.getExternalStorageDirectory() + File.separator  + "photo" + File.separator + "photomini" + File.separator;
     public static String rootPath = "";
+    public static int Recordtime = 1000 * 60 * 3;
+    public static int[] VIDEO_SIZE = {1280, 720};
+    public static int mencode = MediaRecorder.VideoEncoder.MPEG_4_SP;
+
     public CameraSurfaceView(Context context) {
         super(context);
         init(context);
@@ -90,9 +96,9 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         if (!mDirFile.exists()) {
             success = mDirFile.mkdirs();
         }
-   //     mCompressor = new Compressor.Builder(context)
-    //            .setMaxWidth(1920)
-     //           .setMaxHeight(1080).setQuality(100).setDestinationDirectoryPath(photopath).build();
+        //     mCompressor = new Compressor.Builder(context)
+        //            .setMaxWidth(1920)
+        //           .setMaxHeight(1080).setQuality(100).setDestinationDirectoryPath(photopath).build();
         if (cameraStateListener != null) {
             cameraStateListener.onCameraStateChange(cameraState);
         }
@@ -236,14 +242,14 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     };
 
     //设置Camera各项参数
-    public   void startPreview() {
+    public void startPreview() {
         if (mCamera == null) return;
         try {
 
             mParam = mCamera.getParameters();
             mParam.setPreviewFormat(previewformat);
-            mParam.setFlashMode(FLASH_MODE_ON);
-          //  mParam.setRotation(0);
+            mParam.setFlashMode(FLASH_MODE_OFF);
+            //  mParam.setRotation(0);
             Camera.Size previewSize = CamParaUtil.getSize(mParam.getSupportedPreviewSizes(), 1000,
                     mCamera.new Size(VIDEO_1080[1], VIDEO_1080[0]));
             mParam.setPreviewSize(previewSize.width, previewSize.height);
@@ -428,40 +434,26 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                     Toast.makeText(context, "拍照成功", Toast.LENGTH_SHORT).show();
                     if (MainActivity.IsPengZhuang) {
                         if (MainActivity.IsBackCamera) {
-                            if (MainActivity.PZZPCS < 5) {
-                                MainActivity.PZZPCS = MainActivity.PZZPCS + 1;
-                                try {
-                                    Thread.sleep(600);
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-                                capture();
-                            } else if (MainActivity.PZZPCS == 5) {
-                                setDefaultCamera(false);
-                                MainActivity.PZZPCS = 0;
-                                MainActivity.IsBackCamera = false;
-                                capture();
+                            setDefaultCamera(false);
+                            MainActivity.IsBackCamera = false;
+                            capture();
+                            try {
+                                Thread.sleep(600);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
                             }
-                        } else {
-                            if (MainActivity.PZZPCS < 5) {
-                                MainActivity.PZZPCS = MainActivity.PZZPCS + 1;
-                                try {
-                                    Thread.sleep(600);
-                                } catch (InterruptedException e) {
-                                    e.printStackTrace();
-                                }
-                                capture();
-                            } else if (MainActivity.PZZPCS == 5) {
-                                setDefaultCamera(true);
-                                MainActivity.IsBackCamera = true;
-                                MainActivity.IsPengZhuang = false;
-                                closeCamera();
+                            capture();
+                            try {
+                                Thread.sleep(600);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
                             }
-
+                            setDefaultCamera(true);
+                            MainActivity.IsBackCamera = true;
+                            MainActivity.IsPengZhuang = false;
+                            closeCamera();
                         }
-
                     }
-
 
                 }
             });
@@ -478,6 +470,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
      **/
     MediaRecorder mediaRecorder = new MediaRecorder();
     public boolean isRecording = false;
+
     public boolean isRecording() {
         return isRecording;
     }
@@ -497,7 +490,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         mediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+        mediaRecorder.setVideoEncoder(mencode);
         mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         mediaRecorder.setVideoSize(VIDEO_SIZE[0], VIDEO_SIZE[1]);
         // mediaRecorder.setVideoSize(720, 720);
@@ -518,17 +511,17 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         }*/
         //   driveVideo = getMediaOutputPath();
         //   mediaRecorder.setOutputFile(driveVideo.getPath());
-        currentVediopah =getMediaOutputPath();
+        currentVediopah = getMediaOutputPath();
         mediaRecorder.setOutputFile(currentVediopah);
         // 设置录制文件最长时间(10分钟)
-        mediaRecorder.setMaxDuration(1000 * 6);
+        mediaRecorder.setMaxDuration(Recordtime);
         mediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
             @Override
             public void onInfo(MediaRecorder mr, int what, int extra) {
                 switch (what) {
                     case MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED:
                         stopRecord();
-                        if (MainActivity.IsBackCamera) {
+                        if (MainActivity.IsBackCamera && !MainActivity.IsZhualu) {
                             startRecord();
                         }
                         break;
@@ -543,6 +536,9 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             Calendar mCalendar = Calendar.getInstance();
             starttimelamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
             isRecording = true;
+            Intent intent = new Intent();
+            intent.setAction("com.dashcam.intent.START_RECORD");
+            context.sendBroadcast(intent);
         } catch (IOException e) {
             e.printStackTrace();
             return false;
@@ -558,30 +554,24 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         try {
             Calendar mCalendar = Calendar.getInstance();
             long tamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
-            if (tamp-starttimelamp<2) {
+            if (tamp - starttimelamp < 2) {
                 Thread.sleep(1000);
                 stopRecord();
-              /*new Handler().postDelayed(new Runnable() {
-                  @Override
-                  public void run() {
-                      mediaRecorder.stop();
-                      isRecording = false;
-                      Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
-                      if (MainActivity.IsZhualu) {
-                          EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
-                      }
-                  }
-              },2000);*/
-            }
-            else{
+            } else {
                 mediaRecorder.stop();
                 isRecording = false;
+
                 Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
                 if (MainActivity.IsZhualu) {
                     EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
+                } else {
+                    Intent intent = new Intent();
+                    intent.setAction("com.dashcam.intent.STOP_RECORD");
+                    context.sendBroadcast(intent);
                 }
             }
-           ;
+
+            ;
 
             //  videoDb.addDriveVideo(driveVideo);
         } catch (IllegalStateException e) {
@@ -602,7 +592,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     //保存照片
     public String saveBitmap(Bitmap b) {
-        b = FileSUtil.drawTextToBitmap(context,b, DateUtil.getCurrentTimeFormat()+"  "+ MainActivity.GPSSTR);
+        b = FileSUtil.drawTextToBitmap(context, b, DateUtil.getCurrentTimeFormat() + "  " + MainActivity.GPSSTR);
         String jpegName = rootPath + "/photo/" + getTime() + ".jpg";
         File file = new File(rootPath + "/photo");
         if (!file.exists()) {
@@ -658,6 +648,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         String vediopath = rootPath + "/vedio/" + name + ".mp4";
         return vediopath;
     }
+
     /*  private  String getTime() {
           return new SimpleDateFormat("yyyyMMdd-HH:mm:ss").format(new Date(System.currentTimeMillis()));
       }*/
@@ -665,7 +656,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         return new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date(System.currentTimeMillis()));
     }
 
-    public void ResetCamara(){
+    public void ResetCamara() {
         if (mCamera == null) return;
 
         mCamera.unlock();
