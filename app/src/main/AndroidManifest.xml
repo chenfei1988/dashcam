@@ -41,6 +41,7 @@
         android:persistent="true"
         android:supportsRtl="true"
         android:hardwareAccelerated="true"
+        android:sharedUserId="android.uid.system"
         android:largeHeap="true"
         android:theme="@style/AppTheme">
         <meta-data

@@ -431,7 +431,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                     String photopath = saveBitmap(bitmap);
                     startPreview();
                     EventBus.getDefault().post(new RefreshEvent(1, photopath, ""));
-                    Toast.makeText(context, "拍照成功", Toast.LENGTH_SHORT).show();
+                  //  Toast.makeText(context, "拍照成功", Toast.LENGTH_SHORT).show();
                     if (MainActivity.IsPengZhuang) {
                         if (MainActivity.IsBackCamera) {
                             setDefaultCamera(false);

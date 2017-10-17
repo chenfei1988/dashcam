@@ -30,6 +30,7 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
@@ -140,9 +141,15 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     public void onReceiveLocation(BDLocation location) {
         if (location != null) {
             if (location.getLongitude() > 1 && location.getLatitude() > 1) {
-
-                GPSSTR = location.getLongitude() + "," + location.getLatitude() + "," + location.getSpeed() + "," + location.getDirection();
-                LogToFileUtils.write(GPSSTR);//写入日志
+                if (location.getLocType()== BDLocation.TypeGpsLocation) {
+                    GPSSTR = location.getLongitude() + "," + location.getLatitude() + "," + location.getSpeed() + "," + location.getDirection()+",1";
+                }
+                else{
+                    GPSSTR = location.getLongitude() + "," + location.getLatitude() + "," + location.getSpeed() + "," + location.getDirection()+",0";
+                }
+                if (!IsXiumian) {
+                    LogToFileUtils.write(GPSSTR);//写入日志
+                }
             }
             String sendtext = "*" + IMEI + ",1,"
                     + GPSSTR + "#";
@@ -263,7 +270,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         wifiManager = (WifiManager) getSystemService(Context.WIFI_SERVICE);
         //videoDb = new DriveVideoDbHelper(this);
         audioMgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-        audioMgr.setParameters("SET_MIC_CHOOSE=2");
+     //   audioMgr.setParameters("SET_MIC_CHOOSE=2");
         // 获取最大音乐音量
         maxVolume = audioMgr.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         // 初始化音量大概为最大音量的1/2
@@ -321,13 +328,13 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         }*/
         if (timer3 == null) {
             timer3 = new Timer();
-            timer3.schedule(clearTFtask, 3000, 1000 * 60);
+            timer3.schedule(clearTFtask, 3000, 1000 * 60*3);
         }
       /*  smsReceiver = new SmsReceiver();
         IntentFilter filter = new IntentFilter("android.provider.Telephony.SMS_RECEIVED");
         filter.setPriority(Integer.MAX_VALUE);
         registerReceiver(smsReceiver, filter);*/
-        mVideoServer = new VideoServer(DEFAULT_FILE_PATH);
+  //      mVideoServer = new VideoServer(DEFAULT_FILE_PATH);
     }
 
     /*
@@ -363,10 +370,12 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
               /*
         给底层发送广播，获取流量
          */
-            Intent intent = new Intent();
-            intent.setAction("android.intent.REQUEST_DATA_USAGE");
-            sendBroadcast(intent);
-            DeleteOldVedioFile();
+            if (!IsXiumian) {
+                Intent intent = new Intent();
+                intent.setAction("android.intent.REQUEST_DATA_USAGE");
+                sendBroadcast(intent);
+                DeleteOldVedioFile();
+            }
         }
     };
 
@@ -376,19 +385,20 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         if (refresh.getYwlx() == 1) {  //上传图片
             savePicture(refresh.getPhotopath());
             if (!IsPengZhuang) {
-                if (!IsBackCamera) {
-                    //  cameraSurfaceView.stopRecord();
-                    cameraSurfaceView.setDefaultCamera(true);
-                    IsBackCamera = true;
-                    //  IsStopRecord = false;
-                }
                 if (IsXiumian) {
                     cameraSurfaceView.closeCamera();
                     Intent intent = new Intent();
                     intent.setAction("android.intent.TAKE_CAPTURE");
                     sendBroadcast(intent);
-                } else {
-                    cameraSurfaceView.startRecord();
+                }
+                else {
+                    if (!IsBackCamera) {
+                        //  cameraSurfaceView.stopRecord();
+                        cameraSurfaceView.setDefaultCamera(true);
+                        IsBackCamera = true;
+                        cameraSurfaceView.startRecord();
+                        //  IsStopRecord = false;
+                    }
                 }
             }
         } else if (refresh.getYwlx() == 2) { //
@@ -480,9 +490,10 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 case "android.intent.GO_SUSPEND":  //进入休眠
                     IntoXiumian();
                     break;
-                case Intent.ACTION_POWER_CONNECTED
-                        :  //退出休眠
+                case Intent.ACTION_POWER_CONNECTED:  //退出休眠
                     OutXiumian();
+                    // (0 前置摄像头,1 后置摄像头)
+                    cameraSurfaceView.capture();
                     break;
                 case "rock.intent.CHECK_NEW_SOFTWARE"://有更新的时候
                     final String updatetext = "*" + IMEI + ",110"
@@ -550,7 +561,9 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     }
 
     private synchronized void GetZhilingType(String msg) {
-        LogToFileUtils.write(msg);//写入日志
+        if(!IsXiumian) {
+            LogToFileUtils.write(msg);//写入日志
+        }
         if (msg.contains("*") && msg.contains("#")) {
             msg = msg.replace("*", "").replace("#", "");
         }
@@ -1098,12 +1111,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
 
                     }
                 } else {
-                    if (IsXiumian == true) {
-                        cameraSurfaceView.openCamera();
-                        cameraSurfaceView.startPreview();
-                    }
-                    // (0 前置摄像头,1 后置摄像头)
-                    cameraSurfaceView.capture();
+
 
                 }
             }
@@ -1120,7 +1128,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     protected void onDestroy() {
         super.onDestroy();
         cameraSurfaceView.closeCamera();
-        mVideoServer.stop();
+       // mVideoServer.stop();
         //  task.cancel();
         Intent intent = new Intent();
         intent.setAction("com.dashcam.intent.STOP_RECORD");
@@ -1594,41 +1602,45 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     }
 
     public void IntoXiumian() {
-        IsXiumian = true;
-        //   cameraSurfaceView.stopRecord();
-        cameraSurfaceView.closeCamera();
-        mVideoServer.stop();
-        final String intoxiumiantext = "*" + IMEI + ",18,"
-                + 0 + "#";
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                client.send(intoxiumiantext);
-            }
-        }).start();
+        if (!IsXiumian) {
+            //   cameraSurfaceView.stopRecord();
+            cameraSurfaceView.closeCamera();
+           // mVideoServer.stop();
+            final String intoxiumiantext = "*" + IMEI + ",18,"
+                    + 0 + "#";
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    client.send(intoxiumiantext);
+                }
+            }).start();
+            IsXiumian = true;
+        }
 
     }
 
     public void OutXiumian() {
-        IsXiumian = false;
-        if (!cameraSurfaceView.isRecording) {
-            cameraSurfaceView.openCamera();
-            cameraSurfaceView.startPreview();
-            cameraSurfaceView.startRecord();
-        }
-        try {
-            mVideoServer.start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        final String outxiumiantext = "*" + IMEI + ",18,"
-                + 1 + "#";
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                client.send(outxiumiantext);
+        if (IsXiumian) {
+            if (!cameraSurfaceView.isRecording) {
+                cameraSurfaceView.openCamera();
+                cameraSurfaceView.startPreview();
+                cameraSurfaceView.startRecord();
             }
-        }).start();
+         /*   try {
+                mVideoServer.start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }*/
+            final String outxiumiantext = "*" + IMEI + ",18,"
+                    + 1 + "#";
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    client.send(outxiumiantext);
+                }
+            }).start();
+            IsXiumian = false;
+        }
     }
 
     private void IntoPengZhuang() {
