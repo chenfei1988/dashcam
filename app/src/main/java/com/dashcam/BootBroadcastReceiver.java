@@ -14,24 +14,24 @@ import com.dashcam.base.CrashHandler;
  * 邮箱：457771023@qq.com
  */
 public class BootBroadcastReceiver extends BroadcastReceiver {
-    static final String ACTION = "android.intent.action.BOOT_COMPLETED";
+
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (intent.getAction().equals(ACTION)) {
-          /*  try {
-                CrashHandler.getInstance().writeFile("");
-            } catch (Exception e) {
+            try {
+                Thread.sleep(10000L);
+                final Intent mainActivityIntent = new Intent(context, MainActivity.class);  // 要启动的Activity
+                mainActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                final Context mContext = context;
+                new Handler().postDelayed(new Runnable(){
+                    public void run() {
+                        mContext.startActivity(mainActivityIntent);
+                    }
+                }, 25000);
+            } catch (InterruptedException e) {
                 e.printStackTrace();
-            }*/
-            final Intent mainActivityIntent = new Intent(context, MainActivity.class);  // 要启动的Activity
-            mainActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            final Context mContext = context;
-            new Handler().postDelayed(new Runnable(){
-                public void run() {
-                    mContext.startActivity(mainActivityIntent);
-                }
-            }, 20000);
+            }
+
         }
-    }
+
 }

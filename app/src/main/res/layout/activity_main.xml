@@ -16,39 +16,52 @@
 
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
-    <com.dashcam.photovedio.CameraSurfaceView
-        android:id="@+id/cameraSurfaceView"
-        android:layout_width="1dp"
-        android:layout_height="1dp" />
+        android:layout_height="match_parent"
+        >
+
+        <com.dashcam.photovedio.CameraSurfaceView
+            android:id="@+id/cameraSurfaceView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
         <TextView
             android:id="@+id/iszaixian"
             android:layout_width="match_parent"
             android:layout_height="45dp"
             android:gravity="center"
             android:text="在线"
+            android:textColor="@android:color/holo_red_dark"
             android:textSize="20sp"
-            android:textStyle="bold"
-            android:textColor="@android:color/holo_red_dark" />
-    <TextView
-        android:id="@+id/liuliang"
-        android:layout_width="match_parent"
-        android:layout_height="45dp"
-        android:gravity="center"
-        android:textColor="@android:color/holo_green_dark" />
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/liuliang"
+            android:layout_width="match_parent"
+            android:layout_height="45dp"
+            android:gravity="center"
+            android:textColor="@android:color/holo_green_dark" />
 
         <Button
             android:id="@+id/intoxiumian"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="进入休眠"
-            android:visibility="invisible"/>
+            android:visibility="visible" />
+
         <Button
             android:id="@+id/outxiumian"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="50dp"
             android:text="退出休眠"
-            android:visibility="invisible"/>
+            android:visibility="visible" />
+
+        <Button
+            android:id="@+id/turnapk"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="100dp"
+            android:text="跳转界面"
+            android:visibility="invisible" />
     </RelativeLayout>
 </LinearLayout>

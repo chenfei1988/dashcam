@@ -11,39 +11,50 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <uses-permission android:name="android.permission.DEVICE_POWER"
+        tools:ignore="ProtectedPermissions"/>
     <uses-feature android:name="android.hardware.camera" />
     <uses-feature android:name="android.hardware.camera.autofocus" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!--收短信的权限-->
-    <uses-permission android:name="android.permission.RECEIVE_SMS"/>
-    <uses-permission android:name="android.permission.WRITE_MEDIA_STORAGE" tools:ignore="ProtectedPermissions"/>
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission
+        android:name="android.permission.WRITE_MEDIA_STORAGE"
+        tools:ignore="ProtectedPermissions" />
     <!--读取短信信息的权限-->
-    <uses-permission android:name="android.permission.READ_SMS"/>
-    <uses-permission android:name="android.permission.SEND_SMS"/>
-    <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS"/>
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
-    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions"/>
-    <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <!-- 开启闪光灯权限 -->
-    <uses-permission android:name="android.permission.FLASHLIGHT"/>
+    <uses-permission android:name="android.permission.FLASHLIGHT" />
+    <uses-permission android:name="android.permission.REBOOT"
+        tools:ignore="ProtectedPermissions"/>
 
     <application
         android:name=".base.MyAPP"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:persistent="true"
-        android:supportsRtl="true"
-        android:hardwareAccelerated="true"
-        android:sharedUserId="android.uid.system"
         android:largeHeap="true"
+        android:hardwareAccelerated="true"
+        android:persistent="true"
+        android:sharedUserId="android.uid.system"
         android:theme="@style/AppTheme">
+
+
+
         <meta-data
             android:name="com.baidu.lbsapi.API_KEY"
             android:value="SXdUw32OYYeAP3WrmnrNlpiICuDjL7WF" />
@@ -60,31 +71,36 @@
             android:name="com.baidu.speech.SECRET_KEY"
             android:value="oG8iLGwZlnQFIY1Fow9Wahzv2fC4Tp6W" />
 
-       <!-- <service android:name="com.baidu.speech.VoiceRecognitionService" android:exported="false" />-->
+         <service android:name="com.baidu.speech.VoiceRecognitionService" android:exported="false" />
         <service
             android:name="com.baidu.location.f"
             android:enabled="true"
             android:process=":remote" />
-        <activity android:name=".MainActivity"
+        <activity
+            android:name=".MainActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="true"
 
             android:screenOrientation="landscape">
-            <intent-filter  android:priority="1000">
+            <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="com.baidu.speech.recognizerdemo.intent.category.SAMPLE_CODE" />
             </intent-filter>
         </activity>
+
         <receiver android:name=".BootBroadcastReceiver">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </receiver>
         <receiver android:name=".USBDiskReceiver">
-            <intent-filter >
+            <intent-filter>
                 <action android:name="android.intent.action.MEDIA_MOUNTED" />
                 <action android:name="android.intent.action.MEDIA_UNMOUNTED" />
+
                 <data android:scheme="file" />
             </intent-filter>
         </receiver>
