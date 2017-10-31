@@ -10,12 +10,16 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.database.sqlite.SQLiteDatabase;
+import android.os.PowerManager;
+import android.util.Log;
 import android.view.WindowManager;
 
 import com.itgoyo.logtofilelibrary.LogToFileUtils;
 import com.lzy.okhttputils.OkHttpUtils;
 import com.lzy.okhttputils.cookie.store.PersistentCookieStore;
 import java.io.IOException;
+import java.lang.reflect.Method;
+
 import okhttp3.Interceptor;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -102,5 +106,33 @@ public class MyAPP extends Application {
             return response;
         }
 
+    }
+    public static void  ShutDown(){
+        try {
+            Class<?> ServiceManager = Class.forName("android.os.ServiceManager");
+
+            Method getService = ServiceManager.getMethod("getService", java.lang.String.class);
+
+            Object oRemoteService = getService.invoke(null,Context.POWER_SERVICE);
+
+            Class<?> cStub = Class.forName("android.os.IPowerManager$Stub");
+
+            Method asInterface = cStub.getMethod("asInterface", android.os.IBinder.class);
+
+            Object oIPowerManager = asInterface.invoke(null, oRemoteService);
+
+            Method shutdown = oIPowerManager.getClass().getMethod("shutdown",boolean.class,String.class,boolean.class);
+
+            shutdown.invoke(oIPowerManager,false,null,true);
+
+        } catch (Exception e) {
+            Log.e("Myapp", e.toString(), e);
+        }
+
+    }
+    public static  void ReBoot(){
+
+        PowerManager pm = (PowerManager) sInstance.getSystemService(Context.POWER_SERVICE);
+        pm.reboot(null);
     }
 }

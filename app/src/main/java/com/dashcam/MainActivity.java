@@ -171,7 +171,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     //   start();
                     if (timer1 == null) {
                         timer1 = new Timer();
-                        timer1.schedule(task, 100000, 45000);
+                        timer1.schedule(task, 100000, 60000);
                     }
                     if (timer3 == null) {
                         timer3 = new Timer();
@@ -653,9 +653,8 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     //   FileUtil.getCurrentNetDBM(MainActivity.this);
                     break;
                 case "92"://设备重启
+                    MyAPP.ReBoot();
                     LogToFileUtils.write("root Runtime->reboot");
-                    PowerManager pManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
-                    pManager.reboot("重启");
                     break;
                 case "91":// 切换摄像头
                     if (types.length == 3) {
@@ -933,14 +932,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     }).start();
                     break;
                 case "74":
-                    try {
-                        LogToFileUtils.write("root Runtime->shutdown");
-                        //Process proc =Runtime.getRuntime().exec(new String[]{"su","-c","shutdown"});  //关机
-                        java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"su", "-c", "reboot -p"});  //关机
-                        proc.waitFor();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                     MyAPP.ShutDown();
                     break;
                 default:
                     break;
@@ -1020,15 +1012,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 }).start();*/
                 LogToFileUtils.write("root Runtime->shutdown");
                 //Process proc =Runtime.getRuntime().exec(new String[]{"su","-c","shutdown"});  //关机
-
-                try {
-                    java.lang.Process proc = Runtime.getRuntime().exec(new String[]{"su", "-c", "reboot -p"});  //关机
-                    proc.waitFor();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                 MyAPP.ShutDown();
             /*    PowerManager pManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
                 pManager.reboot("重启");*/
             }
