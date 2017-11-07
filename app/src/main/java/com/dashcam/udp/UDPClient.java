@@ -81,7 +81,6 @@ public class UDPClient implements Runnable {
             e.printStackTrace();
         }
         packetSend = new DatagramPacket(newmsg.getBytes() , newmsg.getBytes().length,hostAddress,udpPort);
-
         try {
             socket.send(packetSend);
         } catch (IOException e) {

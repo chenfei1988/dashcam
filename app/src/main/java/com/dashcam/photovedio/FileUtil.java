@@ -1,5 +1,6 @@
 package com.dashcam.photovedio;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.media.MediaPlayer;
@@ -143,6 +144,7 @@ public class FileUtil {
                         tm.getNetworkType() == TelephonyManager.NETWORK_TYPE_UMTS) {
                     //3G网络最佳范围  >-90dBm  越大越好  ps:中国移动3G获取不到  返回的无效dbm值是正数（85dbm）
                     //在这个范围的已经确定是3G，但不同运营商的3G有不同的获取方法，故在此需做判断 判断运营商与网络类型的工具类在最下方
+                    @SuppressLint("MissingPermission")
                     String yys = tm.getSubscriberId();
                     if (yys.startsWith("46000") || yys.startsWith("46002")) {
                         yys = "中国移动";
@@ -349,5 +351,16 @@ public class FileUtil {
 
         }
 
+    }
+    // 递归方式 计算文件的大小
+    public static long getTotalSizeOfFilesInDir(final File file) {
+        if (file.isFile())
+            return file.length();
+        final File[] children = file.listFiles();
+        long total = 0;
+        if (children != null)
+            for (final File child : children)
+                total += getTotalSizeOfFilesInDir(child);
+        return total/1024/1024;
     }
 }
