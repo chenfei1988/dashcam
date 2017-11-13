@@ -218,7 +218,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             //  mParam.setRotation(0);
             Camera.Size previewSize = CamParaUtil.getSize(mParam.getSupportedPreviewSizes(), 1000,
                     mCamera.new Size(VIDEO_1080[1], VIDEO_1080[0]));
-        //     mParam.setPreviewSize(previewSize.width, previewSize.height);
+             mParam.setPreviewSize(previewSize.width, previewSize.height);
             int yuv_buffersize = previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewformat) / 8;
             previewBuffer = new byte[yuv_buffersize];
             Camera.Size pictureSize = CamParaUtil.getSize(mParam.getSupportedPictureSizes(), 1500,

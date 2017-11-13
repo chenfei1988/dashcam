@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
+import android.util.Log;
 
 import com.dashcam.base.CrashHandler;
 
@@ -19,12 +20,16 @@ public class BootBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
             try {
+                Log.e("BootBroadcastReceiver", "onReceive: " );
                 Thread.sleep(10000L);
                 final Intent mainActivityIntent = new Intent(context, MainActivity.class);  // 要启动的Activity
                 mainActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 final Context mContext = context;
                 new Handler().postDelayed(new Runnable(){
                     public void run() {
+                        Intent intent = new Intent();
+                        intent.setAction("com.dashcam.intent.BOOTRECEIVE");
+                        mContext.sendBroadcast(intent);
                         mContext.startActivity(mainActivityIntent);
                     }
                 }, 25000);
