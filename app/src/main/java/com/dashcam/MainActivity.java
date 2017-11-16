@@ -190,11 +190,11 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         timer3 = new Timer();
                         timer3.schedule(clearTFtask, 3000, 1000 * 60 * 3);
                     }
-                    if (DateUtils.IsDay()) {
+               /*   if (DateUtils.IsDay()) {
                         PlayMusic(MainActivity.this, 0);
                     } else {
                         PlayMusic(MainActivity.this, 1);
-                    }
+                    }*/
 
                     if (!IsCharging) {
                         myHandler.postDelayed(new Runnable() {
@@ -951,6 +951,9 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 case "74":
                     MyAPP.ShutDown();
                     break;
+                case "73":
+                    DelAllDangerFile();
+                    break;
                 default:
                     break;
 
@@ -1023,21 +1026,10 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             String action = intent.getAction();
             int temperature = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0);
             if (temperature == 900) {
-               /* final String xiumiantext = "*" + IMEI + ",24,"
-                        + 3 + "#";
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        client.send(xiumiantext);
-                    }
-                }).start();*/
                 LogToFileUtils.write("root Runtime->shutdown");
-                //Process proc =Runtime.getRuntime().exec(new String[]{"su","-c","shutdown"});  //关机
                 MyAPP.ShutDown();
-            /*    PowerManager pManager = (PowerManager) getSystemService(Context.POWER_SERVICE);
-                pManager.reboot("重启");*/
             }
-            if (temperature == 800) {
+           else if (temperature == 800) {
                 final String xiumiantext = "*" + IMEI + ",24,"
                         + 3 + "#";
                 new Thread(new Runnable() {
@@ -1046,6 +1038,21 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         client.send(xiumiantext);
                     }
                 }).start();
+            }
+            else if (temperature == -180) {
+                final String xiumiantext = "*" + IMEI + ",24,"
+                        + 4 + "#";
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        client.send(xiumiantext);
+                    }
+                }).start();
+            }
+            else if (temperature <= -200) {
+                LogToFileUtils.write("root Runtime->shutdown");
+                //Process proc =Runtime.getRuntime().exec(new String[]{"su","-c","shutdown"});  //关机
+                MyAPP.ShutDown();
             }
             if (Intent.ACTION_BATTERY_CHANGED.equals(action)) {
                 int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
@@ -1265,12 +1272,14 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
      */
     private void start() {
 
+
         Map<String, Object> params = new LinkedHashMap<String, Object>();
         params.put(SpeechConstant.ACCEPT_AUDIO_VOLUME, false);
         params.put(SpeechConstant.WP_WORDS_FILE, "assets:///aidemo");
         String json = null; // 这里可以替换成你需要测试的json
         json = new JSONObject(params).toString();
         wakeup.send(SpeechConstant.WAKEUP_START, json, null, 0, 0);
+
     }
 
     /**
@@ -1556,6 +1565,14 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         try {
             long dangerfilesize = FileUtil.getTotalSizeOfFilesInDir(new File(DEFAULT_EMERGENCY_FILE_PATH));
             if (dangerfilesize > 1024) {
+            /*    final String xiumiantext = "*" + IMEI + ",24,"
+                        + 5 + "#";
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        client.send(xiumiantext);
+                    }
+                }).start();*/
                 DeleteDangerFile();
             }
         } catch (Exception e) {
@@ -1633,6 +1650,32 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         }
 
     }
+    //删除指定文件夹下所有文件
+//param path 文件夹完整绝对路径
+    public  boolean DelAllDangerFile() {
+        boolean flag = false;
+        File file = new File(DEFAULT_EMERGENCY_FILE_PATH);
+        if (!file.exists()) {
+            return flag;
+        }
+        if (!file.isDirectory()) {
+            return flag;
+        }
+        String[] tempList = file.list();
+        File temp = null;
+        for (int i = 0; i < tempList.length; i++) {
+            if (DEFAULT_EMERGENCY_FILE_PATH.endsWith(File.separator)) {
+                temp = new File(DEFAULT_EMERGENCY_FILE_PATH + tempList[i]);
+            } else {
+                temp = new File(DEFAULT_EMERGENCY_FILE_PATH + File.separator + tempList[i]);
+            }
+            if (temp.isFile()) {
+                temp.delete();
+            }
+        }
+        return flag;
+    }
+
 
     public void IntoXiumian() {
         ZhuapaiStatus = 7;

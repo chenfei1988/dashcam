@@ -24,7 +24,7 @@ import java.net.UnknownHostException;
 public class UDPClient implements Runnable {
     //final static int udpPort = 3001;
     final static int udpPort = 9999;
-    final static String hostIp = "139.129.193.52";
+    final static String hostIp = "47.104.8.174";
     //final static String hostIp = "192.168.43.22";
     private static DatagramSocket socket = null;
     private static DatagramPacket packetSend,packetRcv;

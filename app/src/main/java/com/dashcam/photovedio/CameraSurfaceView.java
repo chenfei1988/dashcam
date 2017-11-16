@@ -431,7 +431,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         // mediaRecorder.setVideoSize(720, 720);
         //  mediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_720P));
         mediaRecorder.setVideoFrameRate(30);
-        mediaRecorder.setVideoEncodingBitRate(12 * 1024 * 1024);
+        mediaRecorder.setVideoEncodingBitRate(10 * 1024 * 1024);
         currentVediopah = getMediaOutputPath();
         mediaRecorder.setOutputFile(currentVediopah);
         // 设置录制文件最长时间(10分钟)

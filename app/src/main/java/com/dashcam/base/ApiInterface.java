@@ -7,6 +7,7 @@ import android.util.Log;
  */
 public class ApiInterface {
 
+    //http://zfcg.cqxyyxxkj.cn
 
     public static final String MAIN_URL = "http://zfcg.cqxyyxxkj.cn:9090/CPS/";
 
