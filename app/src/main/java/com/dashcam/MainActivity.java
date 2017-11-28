@@ -184,17 +184,17 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     LogToFileUtils.write("Receiverbind Success");//写入日志
                     if (timer1 == null) {
                         timer1 = new Timer();
-                        timer1.schedule(task, 100000, 30000);
+                        timer1.schedule(task, 100000, 5000);
                     }
                     if (timer3 == null) {
                         timer3 = new Timer();
                         timer3.schedule(clearTFtask, 3000, 1000 * 60 * 3);
                     }
-               /*   if (DateUtils.IsDay()) {
+                    if (DateUtils.IsDay()) {
                         PlayMusic(MainActivity.this, 0);
                     } else {
                         PlayMusic(MainActivity.this, 1);
-                    }*/
+                    }
 
                     if (!IsCharging) {
                         myHandler.postDelayed(new Runnable() {
@@ -245,7 +245,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         if (rootPath == null) {
             rootPath = FileUtil.getStoragePath(context, false);
         }
-        DEFAULT_FILE_PATH = rootPath + "/vedio/";
+        DEFAULT_FILE_PATH = rootPath + "/video/";
         DEFAULT_EMERGENCY_FILE_PATH = rootPath + "/EmergencyVideo/";
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
         //videoDb = new DriveVideoDbHelper(this);
@@ -299,6 +299,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         //语音唤醒
         wakeup = EventManagerFactory.create(this, "wp");
         wakeup.registerListener(this); //  EventListener 中 onEvent方法
+        Log.d("BaiduVoice", "onEvent: " + "registerListener");
         //start();
         cameraSurfaceView = (CameraSurfaceView) findViewById(R.id.cameraSurfaceView);
         findViewById(R.id.intoxiumian).setOnClickListener(new View.OnClickListener() {
@@ -357,12 +358,13 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     TimerTask task = new TimerTask() {
         @Override
         public void run() {
-
-            String sendtext = "*" + IMEI + ",1,"
-                    + GPSSTR + "#";
-            boolean status = client.send(sendtext);
-            if (!status) {
-                LogToFileUtils.write("udpClient,发送数据失败");//写入日志
+            if (IsXiumian) {
+                String sendtext = "*" + IMEI + ",1,"
+                        + GPSSTR + "#";
+                boolean status = client.send(sendtext);
+                if (!status) {
+                    LogToFileUtils.write("udpClient,发送数据失败");//写入日志
+                }
             }
             //   wakeLock.acquire();
             //client.setUdpLife(true);
@@ -573,7 +575,8 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
 
     private synchronized void GetZhilingType(String msg) {
         //  if (!IsXiumian) {
-        LogToFileUtils.write(msg);//写入日志
+        LogToFileUtils.write("CommandMsg:" + msg);//写入日志
+        Log.e("CommandMsg", msg);
         //  }
         if (msg.contains("*") && msg.contains("#")) {
             msg = msg.replace("*", "").replace("#", "");
@@ -962,7 +965,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         }
     }
 
-    public void PlayMusic(Context mcontext, final int type) {  //0 day 1 night
+    public synchronized void PlayMusic(Context mcontext, final int type) {  //0 day 1 night
         mediaPlayer = new MediaPlayer();
         switch (type) {
             case 0:
@@ -973,6 +976,9 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 break;
             case 2:
                 mediaPlayer = MediaPlayer.create(mcontext, R.raw.xiumian);
+                break;
+            case 3:
+                mediaPlayer = MediaPlayer.create(mcontext, R.raw.gps_signal_bad);
                 break;
             default:
                 mediaPlayer = MediaPlayer.create(mcontext, R.raw.day);
@@ -997,14 +1003,12 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             @Override
             public void onCompletion(MediaPlayer mp) {
                 // 在播放完毕被回调
-                if (type != 2) {
+                if (type == 0 || type == 1) {
                     try {
                         if (!IsDestoryed) {
                             cameraSurfaceView.capture();
                             Thread.sleep(1000);
                             cameraSurfaceView.startRecord();//开始录像
-
-
                         }
                     } catch (Exception e) {
                         LogToFileUtils.write("kaiji zhuapai noxiumian houzhi failed" + e.toString());//写入日志
@@ -1028,8 +1032,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             if (temperature == 900) {
                 LogToFileUtils.write("root Runtime->shutdown");
                 MyAPP.ShutDown();
-            }
-           else if (temperature == 800) {
+            } else if (temperature == 800) {
                 final String xiumiantext = "*" + IMEI + ",24,"
                         + 3 + "#";
                 new Thread(new Runnable() {
@@ -1038,8 +1041,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         client.send(xiumiantext);
                     }
                 }).start();
-            }
-            else if (temperature == -180) {
+            } else if (temperature == -180) {
                 final String xiumiantext = "*" + IMEI + ",24,"
                         + 4 + "#";
                 new Thread(new Runnable() {
@@ -1048,8 +1050,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         client.send(xiumiantext);
                     }
                 }).start();
-            }
-            else if (temperature <= -200) {
+            } else if (temperature <= -200) {
                 LogToFileUtils.write("root Runtime->shutdown");
                 //Process proc =Runtime.getRuntime().exec(new String[]{"su","-c","shutdown"});  //关机
                 MyAPP.ShutDown();
@@ -1312,11 +1313,14 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             if (location.getLongitude() > 1 && location.getLatitude() > 1) {
                 if (location.getLocType() == BDLocation.TypeGpsLocation) {
                     GPSSTR = location.getLongitude() + "," + location.getLatitude() + "," + location.getSpeed() + "," + location.getDirection() + ",1";
-                    GPSTRZW = "地址：" + location.getAddrStr() + "车速：" + location.getSpeed() + "km/h" + "方向：" + GetDirection(location.getDirection()) + "定位方式：GPS";
+                    GPSTRZW = "地址：" + location.getAddrStr() + "   车速：" + location.getSpeed() + "km/h" + "   方向：" + GetDirection(location.getDirection()) + "   定位方式：GPS";
 
                 } else {
                     GPSSTR = location.getLongitude() + "," + location.getLatitude() + "," + location.getSpeed() + "," + location.getDirection() + ",0";
-                    GPSTRZW = "地址：" + location.getAddrStr() + "车速：" + location.getSpeed() + "km/h" + "方向：" + GetDirection(location.getDirection()) + "定位方式：非GPS";
+                    GPSTRZW = "地址：" + location.getAddrStr() + "   车速：" + location.getSpeed() + "km/h" + "   方向：" + GetDirection(location.getDirection()) + "   定位方式：非GPS";
+                }
+                if (location.getGpsAccuracyStatus() == BDLocation.GPS_ACCURACY_BAD) {
+                    PlayMusic(MainActivity.this, 3);
                 }
                 if (location.getSpeed() > 0) {
                     IsJingzhi = false;
@@ -1351,9 +1355,14 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     //   EventListener  回调方法
     @Override
     public void onEvent(String name, String params, byte[] data, int offset, int length) {
-        // String logTxt = "name: " + name;
+        String logTxt = "name: " + name;
+        Log.d("BaiduVoice", "onEvent: " + logTxt);
+        LogToFileUtils.write("BaiduVoice onEvent: " + logTxt);
         if (params != null && !params.isEmpty()) {
+
             try {
+                Log.d("BaiduVoice", "onEvent: " + params.toString());
+                LogToFileUtils.write("BaiduVoice onEvent: " + params.toString());
                 JSONObject jsonObject = new JSONObject(params);
                 String word = jsonObject.getString("word");
                 if (word.equals("拍照")) {
@@ -1390,7 +1399,6 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             return "东北";
         } else if (fangxiangInteger == 90) {
             return "正北";
-
         } else if (fangxiangInteger > 90 && fangxiangInteger < 180) {
             return "西北";
         } else if (fangxiangInteger == 180) {
@@ -1650,9 +1658,10 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         }
 
     }
+
     //删除指定文件夹下所有文件
 //param path 文件夹完整绝对路径
-    public  boolean DelAllDangerFile() {
+    public boolean DelAllDangerFile() {
         boolean flag = false;
         File file = new File(DEFAULT_EMERGENCY_FILE_PATH);
         if (!file.exists()) {
@@ -1797,11 +1806,11 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                             } else {
                                 try {
                                     cameraSurfaceView.stopRecord();
-                                    Thread.sleep(1200);
+                                    Thread.sleep(1000);
                                     cameraSurfaceView.setDefaultCamera(false);
-                                    Thread.sleep(1300);
+                                    Thread.sleep(1800);
                                     cameraSurfaceView.capture();
-                                    Thread.sleep(1600);
+                                    Thread.sleep(1200);
                                     cameraSurfaceView.setDefaultCamera(true);
                                     Thread.sleep(1200);
                                     cameraSurfaceView.startRecord();

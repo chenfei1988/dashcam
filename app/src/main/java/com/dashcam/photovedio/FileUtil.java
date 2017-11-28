@@ -306,7 +306,7 @@ public class FileUtil {
 
     public  static  void MoveFiletoDangerFile(long currenttime,String rootpath){
 
-        File fileroot = new File(rootpath+"/vedio");
+        File fileroot = new File(rootpath+"/video");
         if (!fileroot.exists()) {
             return;
         }

@@ -41,12 +41,12 @@ import static android.hardware.Camera.Parameters.FLASH_MODE_OFF;
 
 public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Callback, Camera.AutoFocusCallback {
 
-    /* protected static final int[] VIDEO_320 = {320, 240};
-     protected static final int[] VIDEO_480 = {640, 480};
+    // protected static final int[] VIDEO_320 = {320, 240};
+  //   protected static final int[] VIDEO_480 = {640, 480};
      protected static final int[] VIDEO_720 = {1280, 720};
 
-     protected static final int[] VIDEO_2160 = {3600, 2160};*/
-    protected static final int[] VIDEO_1080 = {1920, 1080};
+  //   protected static final int[] VIDEO_2160 = {3600, 2160};
+  //  protected static final int[] VIDEO_1080 = {1920, 1080};
 
     private int screenOritation = Configuration.ORIENTATION_PORTRAIT;
     private boolean mOpenBackCamera = true;
@@ -106,7 +106,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         post(new Runnable() {
             @Override
             public void run() {
-                if(!isAttachedWindow){
+                if (!isAttachedWindow) {
                     mRunInBackground = true;
                     startPreview();
                 }
@@ -119,6 +119,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         super.onAttachedToWindow();
         isAttachedWindow = true;
     }
+
     public void openCamera() {
         if (mOpenBackCamera) {
             mCameraId = findCamera(false);
@@ -141,8 +142,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             LogToFileUtils.write("openCamera Failed");//写入日志
             //  Toast.makeText(context, "打开摄像头失败", Toast.LENGTH_SHORT).show();
             // openCamera();
-        }
-        else{
+        } else {
             LogToFileUtils.write("openCamera Success");//写入日志
         }
     }
@@ -165,10 +165,11 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         }
         return -1;
     }
+
     public boolean setDefaultCamera(boolean backCamera) {
         if (mOpenBackCamera == backCamera) return false;
         if (isRecording) {
-            LogToFileUtils.write("please stop recored vedio");
+            LogToFileUtils.write("please stop recored video");
             Toast.makeText(context, "请先结束录像", Toast.LENGTH_SHORT).show();
             return false;
         }
@@ -187,7 +188,6 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         stopPreview();
         releaseCamera();
     }
-
 
 
     private void releaseCamera() {
@@ -216,13 +216,15 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             mParam.setPreviewFormat(previewformat);
             mParam.setFlashMode(FLASH_MODE_OFF);
             //  mParam.setRotation(0);
-            Camera.Size previewSize = CamParaUtil.getSize(mParam.getSupportedPreviewSizes(), 1000,
-                    mCamera.new Size(VIDEO_1080[1], VIDEO_1080[0]));
-             mParam.setPreviewSize(previewSize.width, previewSize.height);
+          //  Camera.Size previewSize = CamParaUtil.getSize(mParam.getSupportedPreviewSizes(), 1000,
+            Camera.Size previewSize = CamParaUtil.getSize(null, 1000,
+                    mCamera.new Size(VIDEO_720[0], VIDEO_720[1]));
+            mParam.setPreviewSize(previewSize.width, previewSize.height);
             int yuv_buffersize = previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewformat) / 8;
             previewBuffer = new byte[yuv_buffersize];
-            Camera.Size pictureSize = CamParaUtil.getSize(mParam.getSupportedPictureSizes(), 1500,
-                    mCamera.new Size(VIDEO_1080[1], VIDEO_1080[0]));
+            //  Camera.Size pictureSize = CamParaUtil.getSize(mParam.getSupportedPictureSizes(), 2000,
+            Camera.Size pictureSize = CamParaUtil.getSize(null, 1000,
+                    mCamera.new Size(VIDEO_720[0], VIDEO_720[1]));
             mParam.setPictureSize(pictureSize.width, pictureSize.height);
             if (CamParaUtil.isSupportedFormats(mParam.getSupportedPictureFormats(), ImageFormat.JPEG)) {
                 mParam.setPictureFormat(ImageFormat.JPEG);
@@ -256,10 +258,10 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             }
             LogToFileUtils.write("startPreview success");//写入日志
         } catch (Exception e) {
-            LogToFileUtils.write("startPreview Failed"+e.toString());//写入日志
+            LogToFileUtils.write("startPreview Failed" + e.toString());//写入日志
             releaseCamera();
-          //  openCamera();
-           // startPreview();
+            //  openCamera();
+            // startPreview();
         }
       /*  try {
             String mode = mCamera.getParameters().getFocusMode();
@@ -269,6 +271,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         } catch (Exception e) {
         }*/
     }
+
     private void stopPreview() {
         if (mCamera == null) return;
         try {
@@ -296,14 +299,14 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         stopPreview();
-       if (mSurfaceHolder != null) {
-            new Thread(){
+        if (mSurfaceHolder != null) {
+            new Thread() {
                 @Override
                 public void run() {
                     super.run();
-                    try{
+                    try {
                         Thread.sleep(500);
-                    }catch (Exception e){
+                    } catch (Exception e) {
 
                     }
                     startPreview();
@@ -311,7 +314,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             }.start();
 
         }
-      //  startPreview();
+        //  startPreview();
     }
 
     @Override
@@ -392,7 +395,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         } catch (Exception e) {
             if (isRecording) {
                 LogToFileUtils.write("please stop recording video first");
-              //  Toast.makeText(context, "请先结束录像", Toast.LENGTH_SHORT).show();
+                //  Toast.makeText(context, "请先结束录像", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -457,11 +460,11 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             Calendar mCalendar = Calendar.getInstance();
             starttimelamp = mCalendar.getTimeInMillis() / 1000;// 1393844912
             isRecording = true;
-           Intent intent = new Intent();
+            Intent intent = new Intent();
             intent.setAction("com.dashcam.intent.START_RECORD");
             context.sendBroadcast(intent);
         } catch (IOException e) {
-            LogToFileUtils.write("startrecording failed"+e.toString());
+            LogToFileUtils.write("startrecording failed" + e.toString());
             e.printStackTrace();
             return false;
         }
@@ -484,11 +487,11 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 mediaRecorder.stop();
                 isRecording = false;
                 LogToFileUtils.write("video have saved in rootmulu");
-             //   Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
+                //   Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
                 if (MainActivity.IsZhualu) {
                     EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
                 } else {
-                   Intent intent = new Intent();
+                    Intent intent = new Intent();
                     intent.setAction("com.dashcam.intent.STOP_RECORD");
                     context.sendBroadcast(intent);
                 }
@@ -538,7 +541,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     //获取视频存储路径
  /*   public DriveVideo getMediaOutputPath() {
         String name = getTime();
-        String filepath = rootPath + "/vedio";
+        String filepath = rootPath + "/video";
         File file = new File(filepath);
         if (!file.exists()) {
             file.mkdirs();
@@ -549,13 +552,13 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         if (!dangerfile.exists()) {
             dangerfile.mkdirs();
         }
-        String vediopath = rootPath + "/vedio/" + name + ".mp4";
+        String vediopath = rootPath + "/video/" + name + ".mp4";
         return new DriveVideo(name, 0, 480, vediopath);
     }*/
     //获取视频存储路径
     public String getMediaOutputPath() {
         String name = getTime();
-        String filepath = rootPath + "/vedio";
+        String filepath = rootPath + "/video";
         File file = new File(filepath);
         if (!file.exists()) {
             file.mkdirs();
@@ -568,7 +571,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         if (!dangerfile.exists()) {
             dangerfile.mkdirs();
         }
-        String vediopath = rootPath + "/vedio/" + name + ".mp4";
+        String vediopath = rootPath + "/video/" + name + ".mp4";
         return vediopath;
     }
 

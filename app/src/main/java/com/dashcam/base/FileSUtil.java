@@ -666,7 +666,7 @@ public final class FileSUtil {
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         // text color - #3D3D3D
         paint.setColor(Color.RED);
-        paint.setTextSize((int) (18 * scale));
+        paint.setTextSize((int) (14 * scale));
         paint.setDither(true); //获取跟清晰的图像采样
         paint.setFilterBitmap(true);//过滤一些
         Rect bounds = new Rect();
