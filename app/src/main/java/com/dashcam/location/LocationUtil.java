@@ -1,6 +1,7 @@
 package com.dashcam.location;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.baidu.location.BDLocationListener;
 import com.baidu.location.LocationClient;
@@ -32,6 +33,7 @@ public class LocationUtil {
         option.setCoorType("bd09ll"); // 设置坐标类型
         option.setScanSpan(5000);
         option.setIsNeedAddress(true);
+        option.setNeedDeviceDirect(true);
         mLocationClient.setLocOption(option);
         mLocationClient.start();
     }
@@ -42,6 +44,7 @@ public class LocationUtil {
      */
     public void startLocate() {
         mLocationClient.start();
+        Log.e("GPS","  open");
     }
 
     /**
@@ -49,6 +52,7 @@ public class LocationUtil {
      */
     public void stopLocate() {
         mLocationClient.stop();
+        Log.e("GPS","  close");
     }
 
 }

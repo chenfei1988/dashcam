@@ -666,13 +666,13 @@ public final class FileSUtil {
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         // text color - #3D3D3D
         paint.setColor(Color.RED);
-        paint.setTextSize((int) (14 * scale));
+        paint.setTextSize((int) (10 * scale));
         paint.setDither(true); //获取跟清晰的图像采样
         paint.setFilterBitmap(true);//过滤一些
         Rect bounds = new Rect();
         paint.getTextBounds(gText, 0, gText.length(), bounds);
-        int x = 30;
-        int y = 30;
+        int x = 20;
+        int y = 20;
         canvas.drawText(gText, x * scale, y * scale, paint);
         return bitmap;
     }

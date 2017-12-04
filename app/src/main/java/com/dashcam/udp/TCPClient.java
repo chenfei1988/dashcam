@@ -17,8 +17,8 @@ import java.net.Socket;
 
 public class TCPClient implements Runnable{
     private String TAG = "TcpClient";
-    private String  serverIP = "192.168.88.141";
-    private int serverPort = 123456;
+    private String  serverIP = "47.104.8.174";
+    private int serverPort = 9999;
 
     private PrintWriter pw;
     private InputStream is;
@@ -56,6 +56,7 @@ public class TCPClient implements Runnable{
         }
         while (isRun){
             try {
+
                 rcvLen = dis.read(buff);
                 rcvMsg = new String(buff,0,rcvLen,"utf-8");
                 Log.i(TAG, "run: 收到消息:"+ rcvMsg);
@@ -66,7 +67,7 @@ public class TCPClient implements Runnable{
                 if (rcvMsg.equals("QuitClient")){   //服务器要求客户端结束
                     isRun = false;
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
 

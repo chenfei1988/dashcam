@@ -28,6 +28,7 @@ public class MyAPP extends Application {
 
 
     private static MyAPP sInstance;
+    public static boolean Debug = true;
     // 单例模式中获取唯一的MyApplication实例
     public static MyAPP getInstance() {
         if (sInstance == null) {
@@ -43,7 +44,6 @@ public class MyAPP extends Application {
         super.onCreate();
         sInstance = this;
         LogToFileUtils.init(this); //初始化
-
         //必须调用初始化
         OkHttpUtils.init(this);
         CrashHandler.getInstance().init(this);

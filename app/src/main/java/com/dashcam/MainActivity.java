@@ -64,6 +64,7 @@ import com.dashcam.location.LocationUtil;
 import com.dashcam.photovedio.CameraSurfaceView;
 import com.dashcam.photovedio.CheckPermissionsUtil;
 import com.dashcam.photovedio.FileUtil;
+import com.dashcam.udp.TCPClient;
 import com.dashcam.udp.UDPClient;
 import com.itgoyo.logtofilelibrary.LogToFileUtils;
 import com.lzy.okhttputils.OkHttpUtils;
@@ -149,7 +150,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     int cishu = 0;//上传3次，不成功退出
     int Batterylevelbobao = 5;//电池电量
     private long pengzhuangtimestamp = 0;
-    private EventManager wakeup;//语音唤醒
+  //  private EventManager wakeup;//语音唤醒
     int zaixianflag = 0;
     private boolean IsTurnClick = false;//是否跳转到工厂模式
     private boolean IsCharging = false; //判断是否充电
@@ -163,7 +164,9 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     PowerManager powerManager = null;
     //  PowerManager.WakeLock wakeLock = null;
     private boolean IsDestoryed = false;
-
+    private long  lastvideorecordtime =0;//上次接受到抓录命令的时间
+    private long  lasttakepictime =0;//上次接受到抓录命令的时间
+    private  boolean  IsGpsPlay =true;//是否播放GPS信号弱
     // private Timer recordtimer;
     private class MyHandler extends Handler {
 
@@ -178,13 +181,13 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     break;
                 case 10:
                     //   IsStopRecord = false;
-                    start();
+                   // start();
                     registerReceiver(mbatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
                     BindReceiver();
                     LogToFileUtils.write("Receiverbind Success");//写入日志
                     if (timer1 == null) {
                         timer1 = new Timer();
-                        timer1.schedule(task, 100000, 5000);
+                        timer1.schedule(task, 100000, 20000);
                     }
                     if (timer3 == null) {
                         timer3 = new Timer();
@@ -297,8 +300,8 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     private void initViews() {
 
         //语音唤醒
-        wakeup = EventManagerFactory.create(this, "wp");
-        wakeup.registerListener(this); //  EventListener 中 onEvent方法
+     //   wakeup = EventManagerFactory.create(this, "wp");
+   //     wakeup.registerListener(this); //  EventListener 中 onEvent方法
         Log.d("BaiduVoice", "onEvent: " + "registerListener");
         //start();
         cameraSurfaceView = (CameraSurfaceView) findViewById(R.id.cameraSurfaceView);
@@ -361,6 +364,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             if (IsXiumian) {
                 String sendtext = "*" + IMEI + ",1,"
                         + GPSSTR + "#";
+                LogToFileUtils.write("xiumian xintiaobao "+sendtext);//写入日志
                 boolean status = client.send(sendtext);
                 if (!status) {
                     LogToFileUtils.write("udpClient,发送数据失败");//写入日志
@@ -379,7 +383,9 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             if (!IsXiumian) {
                 Intent intent = new Intent();
                 intent.setAction("com.dashcam.intent.REQUEST_DATA_USAGE");
-                sendBroadcast(intent);
+                if (MyAPP.Debug) {
+                    sendBroadcast(intent);
+                }
                 DeleteOldVedioFile();
                 DeleteDangerVedioFile();
             }
@@ -405,6 +411,17 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             //  cameraSurfaceView.stopRecord();
             if (!IsBackCamera) {
                 cameraSurfaceView.setDefaultCamera(true);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                cameraSurfaceView.startPreview();
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 IsBackCamera = true;
             }
 
@@ -414,7 +431,9 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 //   IntoXiumian();
                 Intent intent = new Intent();
                 intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
-                sendBroadcast(intent);
+                if (MyAPP.Debug) {
+                    sendBroadcast(intent);
+                }
             } else {
                 //   IsStopRecord = false;
                 CameraSurfaceView.Recordtime = 60 * 1000 * 3;
@@ -446,6 +465,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         IntentFilter intentFilter8 = new IntentFilter("android.intent.POWER_KEY_SHUTTER");//电源抓拍键
         IntentFilter intentFilter9 = new IntentFilter("com.dashcam.intent.SEND_DATA_USAGE");//获取流量
         IntentFilter intentFilter10 = new IntentFilter(Intent.ACTION_POWER_DISCONNECTED);
+        IntentFilter intentFilter11 = new IntentFilter("ReBootUDP");//重启TCP
         registerReceiver(myBroadcastReceiver, intentFilter1);
         registerReceiver(myBroadcastReceiver, intentFilter2);
         registerReceiver(myBroadcastReceiver, intentFilter3);
@@ -456,12 +476,15 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         registerReceiver(myBroadcastReceiver, intentFilter8);
         registerReceiver(myBroadcastReceiver, intentFilter9);
         registerReceiver(myBroadcastReceiver, intentFilter10);
+        registerReceiver(myBroadcastReceiver, intentFilter11);
         /*
         给底层发送广播，获取流量
          */
         Intent intent = new Intent();
         intent.setAction("com.dashcam.intent.REQUEST_DATA_USAGE");
-        sendBroadcast(intent);
+        if (MyAPP.Debug) {
+            sendBroadcast(intent);
+        }
 
     }
 
@@ -475,6 +498,12 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 case "udpRcvMsg":
                     String msg = intent.getStringExtra("udpRcvMsg");
                     GetZhilingType(msg);
+                    break;
+                case "ReBootUDP":
+                    client.setUdpLife(false);
+                    client = new UDPClient();
+                    ExecutorService exec = Executors.newCachedThreadPool();
+                    exec.execute(client);
                     break;
                 case "android.intent.GO_SUSPEND":  //进入休眠
                     IntoXiumian();
@@ -544,16 +573,6 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 case "android.intent.POWER_KEY_SHUTTER":
                     ZhuapaiStatus = 2;//电源键抓拍
                     new Thread(runnable_zhuai).start();
-                    /*if (IsXiumian) {
-                        cameraSurfaceView.openCamera();
-                        LogToFileUtils.write("openCamera");//写入日志
-                        cameraSurfaceView.startPreview();
-                        cameraSurfaceView.capture();
-                        cameraSurfaceView.closeCamera();
-                        LogToFileUtils.write("closeCamera");//写入日志
-                    } else {
-                        cameraSurfaceView.capture();
-                    }*/
                     break;
                 case "com.dashcam.intent.SEND_DATA_USAGE":
                     int bit = intent.getIntExtra("data_usage", 0);
@@ -594,9 +613,14 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                             IsBackCamera = true;
                             new Thread(runnable_zhuai).start();
                         } else if (lushu.equals("1")) {
-                            ZhuapaiStatus = 1;
-                            IsBackCamera = false;
-                            new Thread(runnable_zhuai).start();
+                            long currenttime = Calendar.getInstance().getTimeInMillis();
+                            LogToFileUtils.write(currenttime-lasttakepictime+"");
+                            if (currenttime-lasttakepictime>7000) {
+                                lasttakepictime=currenttime;
+                                ZhuapaiStatus = 1;
+                                IsBackCamera = false;
+                                new Thread(runnable_zhuai).start();
+                            }
                         }
                     }
                     break;
@@ -644,7 +668,9 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 case "96"://剩余流量  发送广播给底层，由底层来操作
                     Intent intent = new Intent();
                     intent.setAction("com.dashcam.intent.REQUEST_DATA_USAGE");
-                    sendBroadcast(intent);
+                    if (MyAPP.Debug) {
+                        sendBroadcast(intent);
+                    }
                     break;
                 case "95"://费用查询
                     FileUtil.sendSMS("10086", "cxye");
@@ -845,6 +871,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     final String statustext = "*" + IMEI + ",19," +
                             G4Itedbm + "," + Batterylevel + "," + phonenumber + ","
                             + connectnum + "," + hasSDk + "," + version + "#";
+                    LogToFileUtils.write(statustext);
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
@@ -865,17 +892,22 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     }).start();
                     break;
                 case "80"://新增视频抓拍协议
-                    if (types.length == 3) {
-                        String lushu = types[2];
-                        // (1前置摄像头,0后置摄像头)
-                        if (lushu.equals("0")) {
-                            IsBackCamera = true;
-                        } else {
-                            IsBackCamera = false;
+                    long currenttime = Calendar.getInstance().getTimeInMillis();
+                    if (currenttime-lastvideorecordtime>15000){
+                        lastvideorecordtime =currenttime;
+                        if (types.length == 3) {
+                            String lushu = types[2];
+                            // (1前置摄像头,0后置摄像头)
+                            if (lushu.equals("0")) {
+                                IsBackCamera = true;
+                            } else {
+                                IsBackCamera = false;
+                            }
+                            ZhuapaiStatus = 6;
+                            new Thread(runnable_zhuai).start();
                         }
-                        ZhuapaiStatus = 6;
-                        new Thread(runnable_zhuai).start();
                     }
+
                     break;
                 case "79":
                     if (types.length == 3) {
@@ -1006,9 +1038,12 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 if (type == 0 || type == 1) {
                     try {
                         if (!IsDestoryed) {
-                            cameraSurfaceView.capture();
-                            Thread.sleep(1000);
                             cameraSurfaceView.startRecord();//开始录像
+                            myHandler.postDelayed(new Runnable() {
+                                public void run() {
+                                    cameraSurfaceView.capture();
+                                }
+                            }, 4000);
                         }
                     } catch (Exception e) {
                         LogToFileUtils.write("kaiji zhuapai noxiumian houzhi failed" + e.toString());//写入日志
@@ -1111,10 +1146,13 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         LogToFileUtils.write("closeCamera");//写入日志
         // mVideoServer.stop();
         //  task.cancel();
+        client.setUdpLife(false);
         Intent intent = new Intent();
         intent.setAction("com.dashcam.intent.STOP_RECORD");
-        sendBroadcast(intent);
-        wakeup.send(SpeechConstant.WAKEUP_STOP, "{}", null, 0, 0);
+        if (MyAPP.Debug) {
+            sendBroadcast(intent);
+        }
+     //   wakeup.send(SpeechConstant.WAKEUP_STOP, "{}", null, 0, 0);
         if (timer1 != null) {
             timer1.cancel();
             timer1 = null;
@@ -1181,6 +1219,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             return enable;
 
         } catch (Exception e) {
+            LogToFileUtils.write("createWifiHotspot failed" + e.toString());
             e.printStackTrace();
             return false;
         }
@@ -1198,15 +1237,19 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             Method method2 = wifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
             method2.invoke(wifiManager, config, false);
         } catch (NoSuchMethodException e) {
+            LogToFileUtils.write("closeWifiHotspot failed" + e.toString());
             success = false;
             e.printStackTrace();
         } catch (IllegalArgumentException e) {
+            LogToFileUtils.write("closeWifiHotspot failed" + e.toString());
             success = false;
             e.printStackTrace();
         } catch (IllegalAccessException e) {
+            LogToFileUtils.write("closeWifiHotspot failed" + e.toString());
             success = false;
             e.printStackTrace();
         } catch (InvocationTargetException e) {
+            LogToFileUtils.write("closeWifiHotspot failed" + e.toString());
             success = false;
             e.printStackTrace();
         }
@@ -1279,7 +1322,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         params.put(SpeechConstant.WP_WORDS_FILE, "assets:///aidemo");
         String json = null; // 这里可以替换成你需要测试的json
         json = new JSONObject(params).toString();
-        wakeup.send(SpeechConstant.WAKEUP_START, json, null, 0, 0);
+      //  wakeup.send(SpeechConstant.WAKEUP_START, json, null, 0, 0);
 
     }
 
@@ -1320,7 +1363,17 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     GPSTRZW = "地址：" + location.getAddrStr() + "   车速：" + location.getSpeed() + "km/h" + "   方向：" + GetDirection(location.getDirection()) + "   定位方式：非GPS";
                 }
                 if (location.getGpsAccuracyStatus() == BDLocation.GPS_ACCURACY_BAD) {
-                    PlayMusic(MainActivity.this, 3);
+                    if (IsGpsPlay){
+                        PlayMusic(MainActivity.this, 3);
+                        IsGpsPlay=false;
+                    }
+                    new Handler().postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            IsGpsPlay=true;
+                        }
+                    },10*60*1000);
+
                 }
                 if (location.getSpeed() > 0) {
                     IsJingzhi = false;
@@ -1416,7 +1469,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         }
     }
 
-    public void saveFile(final String path, final boolean IsZhualu) {
+    public void saveFile(final String path, final boolean isZhualu) {
         List<File> mList = new ArrayList<>();
         mList.add(new File(path));
         OkHttpUtils.post(ApiInterface.saveFile)     // 请求方式和请求url
@@ -1434,7 +1487,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                                          cishu = 0;
                                          String backurl = mJsonObject.getString("msg");
                                          //    backurl = backurl.substring(0, backurl.length() - 1);
-                                         if (IsZhualu) {
+                                         if (isZhualu) {
                                              backurl = "*" + IMEI + ",21," + backurl + "#";
                                          } else {
                                              backurl = "*" + IMEI + ",14," + backurl + "#";
@@ -1445,18 +1498,19 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                                                      @Override
                                                      public void run() {
                                                          client.send(url);
-                                                        /* Message message = Message.obtain();
-                                                         message.what = 2;
-                                                         message.obj = url;
-                                                         myHandler.sendMessage(message);*/
                                                      }
                                                  }
                                          ).start();
-
-
+                                         if (IsXiumian) {
+                                             Intent intent = new Intent();
+                                             intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
+                                             if (MyAPP.Debug) {
+                                                 sendBroadcast(intent);
+                                             }
+                                         }
                                      }
                                  } catch (Exception e) {
-                                     LogToFileUtils.write(e.toString());//写入日志
+                                     LogToFileUtils.write("saveFile"+e.toString());//写入日志
                                      e.printStackTrace();
                                  }
                              }
@@ -1464,10 +1518,10 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                              @Override
                              public void onError(boolean isFromCache, Call call, @Nullable Response
                                      response, @Nullable Exception e) {
-                                 LogToFileUtils.write(e.toString());//写入日志
+                                 LogToFileUtils.write("saveFile"+e.toString());//写入日志
                                  cishu = cishu + 1;
                                  if (cishu < 3) {
-                                     saveFile(path, IsZhualu);
+                                     saveFile(path, isZhualu);
                                  }
                                  super.onError(isFromCache, call, response, e);
 
@@ -1503,16 +1557,19 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                                                      @Override
                                                      public void run() {
                                                          client.send(url);
-                                                         // Message message = Message.obtain();
-                                                         //  message.what = 1;
-                                                         //  message.obj = url;
-                                                         //    myHandler.sendMessage(message);
                                                      }
                                                  }
                                          ).start();
-
+                                         if (IsXiumian) {
+                                             Intent intent = new Intent();
+                                             intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
+                                             if (MyAPP.Debug) {
+                                                 sendBroadcast(intent);
+                                             }
+                                         }
                                      }
                                  } catch (Exception e) {
+                                     LogToFileUtils.write("saveFile"+e.toString());//写入日志
                                      e.printStackTrace();
                                  }
                              }
@@ -1520,6 +1577,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                              @Override
                              public void onError(boolean isFromCache, Call call, @Nullable Response
                                      response, @Nullable Exception e) {
+                                 LogToFileUtils.write("saveFile"+e.toString());//写入日志
                                  cishu = cishu + 1;
                                  if (cishu < 3) {
                                      savePicture(path);
@@ -1584,6 +1642,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 DeleteDangerFile();
             }
         } catch (Exception e) {
+            LogToFileUtils.write("saveFile"+e.toString());//写入日志
             e.printStackTrace();
         }
 
@@ -1761,38 +1820,77 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                                 try {
                                     cameraSurfaceView.openCamera();
                                     Thread.sleep(1200);
+                                    LogToFileUtils.write("openCamera");//写入日志
                                     cameraSurfaceView.startPreview();
+                                    LogToFileUtils.write("startPreview");//写入日志
                                     Thread.sleep(1200);
                                     cameraSurfaceView.capture();
+                                    LogToFileUtils.write("capture");//写入日志
                                     Thread.sleep(1500);
                                     cameraSurfaceView.closeCamera();
-                                    Intent intent = new Intent();
-                                    intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
-                                    LogToFileUtils.write("guangbo send");//写入日志
-                                    sendBroadcast(intent);
+                                    LogToFileUtils.write("closeCamera");//写入日志
+                                    myHandler.postDelayed(new Runnable() {
+                                        public void run() {
+                                            if (!IsCharging) {
+                                                Intent intent = new Intent();
+                                                intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
+                                                LogToFileUtils.write("xiumianguangbo send");//写入日志
+                                                if (MyAPP.Debug) {
+                                                    sendBroadcast(intent);
+                                                }
+                                            }
+                                        }
+                                    }, 20000);
+
                                 } catch (Exception e) {
                                     LogToFileUtils.write("weixin zhuapai xiumian houzhi failed" + e.toString());//写入日志
                                 }
                             } else {
                                 try {
                                     cameraSurfaceView.openCamera();
+                                    LogToFileUtils.write("openCamera");//写入日志
                                     Thread.sleep(1200);
                                     cameraSurfaceView.startPreview();
-                                    Thread.sleep(1200);
+                                    LogToFileUtils.write("startPreview");//写入日志
+                                    Thread.sleep(1000);
                                     cameraSurfaceView.setDefaultCamera(false);
-                                    Thread.sleep(1300);
+                                    LogToFileUtils.write("setDefaultCamera");//写入日志
+                                    Thread.sleep(1600);
                                     cameraSurfaceView.capture();
+                                    LogToFileUtils.write("capture");//写入日志
                                     Thread.sleep(1600);
                                     cameraSurfaceView.setDefaultCamera(true);
+                                    LogToFileUtils.write("setDefaultCamera false");//写入日志
                                     Thread.sleep(1200);
                                     IsBackCamera = true;
                                     cameraSurfaceView.closeCamera();
-                                    Intent intent = new Intent();
-                                    intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
-                                    LogToFileUtils.write("guangbo send");//写入日志
-                                    sendBroadcast(intent);
+                                    LogToFileUtils.write("closeCamera");//写入日志
+                                    myHandler.postDelayed(new Runnable() {
+                                        public void run() {
+                                            if (!IsCharging) {
+                                                Intent intent = new Intent();
+                                                intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
+                                                LogToFileUtils.write("xiumianguangbo send");//写入日志
+                                                if (MyAPP.Debug) {
+                                                    sendBroadcast(intent);
+                                                }
+                                            }
+                                        }
+                                    }, 20000);
 
                                 } catch (Exception e) {
+                                    myHandler.postDelayed(new Runnable() {
+                                        public void run() {
+                                            if (!IsCharging) {
+                                                Intent intent = new Intent();
+                                                intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
+                                                LogToFileUtils.write("xiumianguangbo send");//写入日志
+                                                if (MyAPP.Debug) {
+                                                    sendBroadcast(intent);
+                                                }
+                                            }
+                                        }
+                                    }, 20000);
                                     LogToFileUtils.write("weixin zhuapai xiumian qianzhi failed" + e.toString());//写入日志
                                 }
                             }
@@ -1806,14 +1904,19 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                             } else {
                                 try {
                                     cameraSurfaceView.stopRecord();
+                                    LogToFileUtils.write("stopRecord");//写入日志
                                     Thread.sleep(1000);
                                     cameraSurfaceView.setDefaultCamera(false);
+                                    LogToFileUtils.write("setDefaultCamera");//写入日志
                                     Thread.sleep(1800);
                                     cameraSurfaceView.capture();
+                                    LogToFileUtils.write("capture");//写入日志
                                     Thread.sleep(1200);
                                     cameraSurfaceView.setDefaultCamera(true);
+                                    LogToFileUtils.write("setDefaultCamera true");//写入日志
                                     Thread.sleep(1200);
                                     cameraSurfaceView.startRecord();
+                                    LogToFileUtils.write("startRecord");//写入日志
 
                                 } catch (Exception e) {
                                     LogToFileUtils.write("weixin zhuapai noxiumian qianzhi failed" + e.toString());//写入日志
@@ -1822,21 +1925,46 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         }
                         break;
                     case 2: //电源键抓拍
+                        LogToFileUtils.write("xiumianzhua pai");//写入日志
                         if (isxiumian) {
                             try {
                                 cameraSurfaceView.openCamera();
+                                LogToFileUtils.write("openCamera");//写入日志
                                 Thread.sleep(1200);
                                 cameraSurfaceView.startPreview();
+                                LogToFileUtils.write("startPreview");//写入日志
                                 Thread.sleep(1200);
                                 cameraSurfaceView.capture();
+                                LogToFileUtils.write("capture");//写入日志
                                 Thread.sleep(1500);
                                 cameraSurfaceView.closeCamera();
-                                Intent intent = new Intent();
-                                intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
-                                LogToFileUtils.write("guangbo send");//写入日志
-                                sendBroadcast(intent);
+                                LogToFileUtils.write("closeCamera");//写入日志
+                                myHandler.postDelayed(new Runnable() {
+                                    public void run() {
+                                        if (!IsCharging) {
+                                            Intent intent = new Intent();
+                                            intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
+                                            LogToFileUtils.write("xiumianguangbo send");//写入日志
+                                            if (MyAPP.Debug) {
+                                                sendBroadcast(intent);
+                                            }
+                                        }
+                                    }
+                                }, 20000);
 
                             } catch (Exception e) {
+                                myHandler.postDelayed(new Runnable() {
+                                    public void run() {
+                                        if (!IsCharging) {
+                                            Intent intent = new Intent();
+                                            intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
+                                            LogToFileUtils.write("xiumianguangbo send");//写入日志
+                                            if (MyAPP.Debug) {
+                                                sendBroadcast(intent);
+                                            }
+                                        }
+                                    }
+                                }, 20000);
                                 LogToFileUtils.write("weixin zhuapai xiumian houzhi failed" + e.toString());//写入日志
                             }
                         } else {
@@ -1849,25 +1977,50 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         }
                         break;
                     case 3: //碰撞抓拍
+                        LogToFileUtils.write("peng zhuang  zhua pai");//写入日志
                         try {
                             cameraSurfaceView.openCamera();
+                            LogToFileUtils.write("openCamera");//写入日志
                             Thread.sleep(1200);
                             cameraSurfaceView.startPreview();
+                            LogToFileUtils.write("startPreview");//写入日志
                             Thread.sleep(1300);
                             cameraSurfaceView.capture();
+                            LogToFileUtils.write("capture");//写入日志
                           /*  Thread.sleep(100);
                             cameraSurfaceView.setDefaultCamera(false);
                             Thread.sleep(100);
                             cameraSurfaceView.capture();*/
                             Thread.sleep(1500);
                             cameraSurfaceView.closeCamera();
-                            Intent intent = new Intent();
-                            intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
-                            sendBroadcast(intent);
-                            LogToFileUtils.write("guangbo send");//写入日志
+                            LogToFileUtils.write("closeCamera");//写入日志
+                            myHandler.postDelayed(new Runnable() {
+                                public void run() {
+                                    if (!IsCharging) {
+                                        Intent intent = new Intent();
+                                        intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
+                                        LogToFileUtils.write("xiumianguangbo send");//写入日志
+                                        if (MyAPP.Debug) {
+                                            sendBroadcast(intent);
+                                        }
+                                    }
+                                }
+                            }, 20000);
 
-                            LogToFileUtils.write("intopengzhuangzhupai");//写入日志
+                            LogToFileUtils.write("into  pengzhuang  zhupai ");//写入日志
                         } catch (Exception e) {
+                            myHandler.postDelayed(new Runnable() {
+                                public void run() {
+                                    if (!IsCharging) {
+                                        Intent intent = new Intent();
+                                        intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
+                                        LogToFileUtils.write("xiumianguangbo send");//写入日志
+                                        if (MyAPP.Debug) {
+                                            sendBroadcast(intent);
+                                        }
+                                    }
+                                }
+                            }, 20000);
                             LogToFileUtils.write("pengzhuang zhuapai failed" + e.toString());//写入日志
                         }
                         break;
@@ -1876,15 +2029,21 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                             if (isbackcamera) {
                                 try {
                                     cameraSurfaceView.openCamera();
+                                    LogToFileUtils.write("openCamera");//写入日志
                                     Thread.sleep(1200);
                                     cameraSurfaceView.startPreview();
+                                    LogToFileUtils.write("startPreview");//写入日志
                                     Thread.sleep(1200);
                                     cameraSurfaceView.capture();
+                                    LogToFileUtils.write("capture");//写入日志
                                     Thread.sleep(1500);
                                     cameraSurfaceView.closeCamera();
+                                    LogToFileUtils.write("closeCamera");//写入日志
                                     Intent intent = new Intent();
                                     intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
-                                    sendBroadcast(intent);
+                                    if (MyAPP.Debug) {
+                                        sendBroadcast(intent);
+                                    }
                                     LogToFileUtils.write("guangbo send");//写入日志
                                 } catch (Exception e) {
                                     LogToFileUtils.write("weixin zhuapai xiumian houzhi failed" + e.toString());//写入日志
@@ -1901,16 +2060,22 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         }
                         break;
                     case 5: //充电抓拍
+
+                        LogToFileUtils.write("chongdian zhua pai");//写入日志
                         if (isxiumian) {
                             if (isbackcamera) {
                                 try {
                                     cameraSurfaceView.openCamera();
+                                    LogToFileUtils.write("openCamera");//写入日志
                                     Thread.sleep(1200);
                                     cameraSurfaceView.startPreview();
+                                    LogToFileUtils.write("startPreview");//写入日志
                                     Thread.sleep(1200);
                                     cameraSurfaceView.capture();
+                                    LogToFileUtils.write("capture");//写入日志
                                     Thread.sleep(1500);
                                     cameraSurfaceView.closeCamera();
+                                    LogToFileUtils.write("closeCamera");//写入日志
                                 } catch (Exception e) {
                                     LogToFileUtils.write("kaiji zhuapai xiumian houzhi failed" + e.toString());//写入日志
                                 }
@@ -1919,6 +2084,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                             if (isbackcamera) {
                                 try {
                                     cameraSurfaceView.capture();
+                                    LogToFileUtils.write("capture");//写入日志
                                 } catch (Exception e) {
                                     LogToFileUtils.write("kaiji zhuapai noxiumian houzhi failed" + e.toString());//写入日志
                                 }
@@ -1932,8 +2098,10 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                                 Thread.sleep(1200);
                                 LogToFileUtils.write("openCamera");//写入日志
                                 cameraSurfaceView.startPreview();
+                                LogToFileUtils.write("startPreview");//写入日志
                                 Thread.sleep(1200);
                             } catch (InterruptedException e) {
+                                LogToFileUtils.write("zhua lu shi pin"+e.toString());//写入日志
                                 e.printStackTrace();
                             }
 
@@ -1947,25 +2115,42 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         if (!isbackcamera) {
                             try {
                                 cameraSurfaceView.setDefaultCamera(false);
-                                Thread.sleep(1200);
+                                Thread.sleep(1000);
                                 IsBackCamera = false;
                             } catch (Exception e) {
+                                LogToFileUtils.write("zhua lu shi pin"+e.toString());//写入日志
                             }
                         }
                         cameraSurfaceView.startRecord();
+                        LogToFileUtils.write("startRecord");//写入日志
+
                         break;
                     case 7: //进入休眠
                         if (!IsXiumian) {
                             //   cameraSurfaceView.stopRecord();
                             cameraSurfaceView.closeCamera();
                             LogToFileUtils.write("closeCamera");//写入日志
+
                             mLocationUtil.stopLocate();
+                            LogToFileUtils.write("stopLocate");//写入日志
                             // mVideoServer.stop();
                             final String intoxiumiantext = "*" + IMEI + ",18,"
                                     + 0 + "#";
                             client.send(intoxiumiantext);
                             IsXiumian = true;
                             LogToFileUtils.write("intoxiumian");//写入日志
+                            myHandler.postDelayed(new Runnable() {
+                                public void run() {
+                                    if (!IsCharging) {
+                                        Intent intent = new Intent();
+                                        intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
+                                        LogToFileUtils.write("xiumianguangbo send");//写入日志
+                                        if (MyAPP.Debug) {
+                                            sendBroadcast(intent);
+                                        }
+                                    }
+                                }
+                            }, 20000);
                             //  closeWifiHotspot();
                         }
                         break;
@@ -1977,9 +2162,12 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                                     LogToFileUtils.write("openCamera");//写入日志
                                     Thread.sleep(100);
                                     cameraSurfaceView.startPreview();
+                                    LogToFileUtils.write("startPreview");//写入日志
                                     Thread.sleep(100);
                                     cameraSurfaceView.startRecord();
+                                    LogToFileUtils.write("startRecord");//写入日志
                                 } catch (InterruptedException e) {
+                                    LogToFileUtils.write("tuichu xiu mian"+e.toString());//写入日志
                                     e.printStackTrace();
                                 }
                             }
@@ -1993,12 +2181,16 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         }
                         break;
                     case 9://碰撞移动视频
+                        LogToFileUtils.write("pengzhuang yidong shipin");//写入日志
                         final long currenttime = System.currentTimeMillis();
                         try {
                             cameraSurfaceView.stopRecord();
+                            LogToFileUtils.write("stopRecord");//写入日志
                             Thread.sleep(200);
                             cameraSurfaceView.startRecord();
+                            LogToFileUtils.write("startRecord");//写入日志
                         } catch (InterruptedException e) {
+                            LogToFileUtils.write("pengzhuang"+e.toString());//写入日志
                             e.printStackTrace();
                         }
                         Timer timer = new Timer();//实例化Timer类
@@ -2009,6 +2201,18 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                             }
                         }, 3000);//3秒
                         LogToFileUtils.write("intopengzhuangshipin");//写入日志
+                        myHandler.postDelayed(new Runnable() {
+                            public void run() {
+                                if (!IsCharging) {
+                                    Intent intent = new Intent();
+                                    intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
+                                    LogToFileUtils.write("xiumianguangbo send");//写入日志
+                                    if (MyAPP.Debug) {
+                                        sendBroadcast(intent);
+                                    }
+                                }
+                            }
+                        }, 20000);
                         break;
                     default:
                         break;
