@@ -147,7 +147,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     public static String rootPath = "";//存放视频的路径
     int Batterylevel = 100;//电池电量
     private String phonenumber = "";
-    private int G4Itedbm = 0;//4G信号强弱
+    private String G4Itedbm = "";//4G信号强弱
 
     public static boolean IsZhualu = false;//是否在抓录视频
     public static boolean IsPengZhuang = false;//是否是碰撞
@@ -290,7 +290,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         //  wakeLock = powerManager.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "screen_on");
         //   wakeLock.acquire();
         //   wakeLock = this.powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "My Lock");
-        getCurrentNetDBM();
+        FileUtil.getCurrentNetDBM(MainActivity.this);
         LogToFileUtils.write("NETDBM Success");//写入日志
 
         DeleteOldVedioFile();
@@ -406,7 +406,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     + refresh.getPhotopath() + "#";
             client.send(sendtext);
         } else if (refresh.getYwlx() == 3) {   //获取4G信号
-          //  G4Itedbm = refresh.getPhotopath();
+            G4Itedbm = refresh.getPhotopath();
         } else if (refresh.getYwlx() == 4) {   //抓录视频
             String vediopath = refresh.getPhotopath();
             saveFile(vediopath, IsZhualu);
@@ -2300,7 +2300,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             //获取网络信号强度
             //获取0-4的5种信号级别，越大信号越好,但是api23开始才能用
 //            int level = signalStrength.getLevel();
-            G4Itedbm = signalStrength.getLevel();
+           // G4Itedbm = signalStrength.getLevel();
             int asu = signalStrength.getGsmSignalStrength();
 
         }
