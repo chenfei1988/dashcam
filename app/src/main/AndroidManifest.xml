@@ -39,6 +39,7 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <!-- 开启闪光灯权限 -->
     <uses-permission android:name="android.permission.FLASHLIGHT" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.REBOOT"
         tools:ignore="ProtectedPermissions"/>
 
@@ -56,18 +57,30 @@
            <meta-data
                android:name="com.baidu.lbsapi.API_KEY"
                android:value="SXdUw32OYYeAP3WrmnrNlpiICuDjL7WF" />
-           <meta-data
-               android:name="com.baidu.speech.APP_ID"
-               android:value="10136595" />
-           <!-- 再次重复！！填写APP_ID 时请检查在官网的该应用内是否设置了包名。否则会导致唤醒词及离线功能无法使用。
-            本demo的包名是com.baidu.speech.recognizerdemo，在build.gradle文件中查看。 -->
-        <!-- 正式发布时，请替换成您自己的appId 本demo的appId会不定时下线 -->
+        <!--      <meta-data
+                android:name="com.baidu.speech.APP_ID"
+                android:value="10136595" />
+           再次重复！！填写APP_ID 时请检查在官网的该应用内是否设置了包名。否则会导致唤醒词及离线功能无法使用。
+             本demo的包名是com.baidu.speech.recognizerdemo，在build.gradle文件中查看。 -->
+        <!-- 正式发布时，请替换成您自己的appId 本demo的appId会不定时下线
         <meta-data
             android:name="com.baidu.speech.API_KEY"
             android:value="BMWx6dx00iHiGnivjFjRUqlT" />
         <meta-data
             android:name="com.baidu.speech.SECRET_KEY"
-            android:value="oG8iLGwZlnQFIY1Fow9Wahzv2fC4Tp6W" />
+            android:value="oG8iLGwZlnQFIY1Fow9Wahzv2fC4Tp6W" />-->
+        <meta-data
+            android:name="com.baidu.speech.APP_ID"
+            android:value="10343101" />
+        <!-- 再次重复！！填写APP_ID 时请检查在官网的该应用内是否设置了包名。否则会导致唤醒词及离线功能无法使用。
+         本demo的包名是com.baidu.speech.recognizerdemo，在build.gradle文件中查看。 -->
+        <!-- 正式发布时，请替换成您自己的appId 本demo的appId会不定时下线 -->
+        <meta-data
+            android:name="com.baidu.speech.API_KEY"
+            android:value="iArHw8vxTO076Gq6yhkY13Vd" />
+        <meta-data
+            android:name="com.baidu.speech.SECRET_KEY"
+            android:value="CxMc9AXwcTwbm5PKj94F5v0aA2QInrRu" />
 
          <service android:name="com.baidu.speech.VoiceRecognitionService" android:exported="true" />
         <service

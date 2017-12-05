@@ -130,7 +130,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             mCamera = Camera.open(mCameraId);
         } catch (Exception ee) {
             LogToFileUtils.write("findCamera:" + ee.toString());
-            Log.e("findCamera:", "findCamera failed"+ee.toString());
+            Log.e("findCamera:", "findCamera failed" + ee.toString());
             mCamera = null;
             cameraState = CameraState.ERROR;
             if (cameraStateListener != null) {
@@ -162,7 +162,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             }
         } catch (Exception e) {
             LogToFileUtils.write("findCamera:" + e.toString());
-            Log.e("findCamera:", "findCamera failed"+e.toString());
+            Log.e("findCamera:", "findCamera failed" + e.toString());
             e.printStackTrace();
         }
         return -1;
@@ -237,8 +237,13 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     public void startPreview() {
         if (mCamera == null) return;
         try {
-
-            mParam = mCamera.getParameters();
+            if (mediaRecorder == null) {
+                mCamera.lock();
+                mParam = mCamera.getParameters();
+            } else {
+                mParam = mCamera.getParameters();
+            }
+            //  mParam = mCamera.getParameters();
             mParam.setPreviewFormat(previewformat);
             mParam.setFlashMode(FLASH_MODE_OFF);
             //  mParam.setRotation(0);
@@ -281,7 +286,14 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 mCamera.setPreviewDisplay(mSurfaceHolder);
 //                mCamera.setPreviewCallback(previewCallback);//设置摄像头预览帧回调
             }
-            mCamera.setParameters(mParam);
+            try {
+                mCamera.setParameters(mParam);
+            } catch (Exception ex) {
+                LogToFileUtils.write(" mCamera.setParameters" + ex.toString());//写入日志
+                ex.printStackTrace();
+            }
+
+            // mCamera.setParameters(mParam);
             mCamera.startPreview();
             if (cameraState != CameraState.START) {
                 cameraState = CameraState.START;
@@ -382,8 +394,9 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     public void capture() {
 
         if (mCamera == null) return;
-         onAutoFocus(mCamera);
+        onAutoFocus(mCamera);
     }
+
     public void onAutoFocus(Camera camera) {
         try {
             mCamera.takePicture(new Camera.ShutterCallback() {
@@ -528,7 +541,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             bos.flush();
             bos.close();
         } catch (IOException e) {
-            LogToFileUtils.write("save Bitmap failed"+e.toString());
+            LogToFileUtils.write("save Bitmap failed" + e.toString());
             e.printStackTrace();
             return "";
         }

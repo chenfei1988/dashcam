@@ -99,7 +99,7 @@ public class UDPClient implements Runnable {
 
         try {
             socket = new DatagramSocket();
-            socket.setSoTimeout(30000);
+            socket.setSoTimeout(12000);
         } catch (SocketException e) {
             LogToFileUtils.write("udpClient,建立接收数据报失败" + e.toString());//写入日志
             Log.i("udpClient", "建立接收数据报失败");
@@ -119,13 +119,14 @@ public class UDPClient implements Runnable {
                 MainActivity.context.sendBroadcast(RcvIntent);
 
                 Log.i("Rcv", RcvMsg);
-            } catch (IOException e) {
-                Log.i("Udp", "接收超时");
-                Intent RcvIntent = new Intent();
+            } catch (Exception e) {
+                Log.i("Udp", "接收超时"+e.toString());
+                LogToFileUtils.write("udpClient, 接收超时");//写入日志
+            /*    Intent RcvIntent = new Intent();
                 RcvIntent.setAction("ReBootUDP");
                 RcvIntent.putExtra("ReBootUDP", "111");
                 MainActivity.context.sendBroadcast(RcvIntent);
-                udpLife=false;
+                udpLife=false;*/
                 e.printStackTrace();
             }
         }
