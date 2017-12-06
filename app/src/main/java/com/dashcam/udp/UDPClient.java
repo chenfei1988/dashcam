@@ -5,6 +5,9 @@ import android.util.Log;
 
 import com.dashcam.MainActivity;
 import com.dashcam.base.DateUtil;
+import com.dashcam.base.FileSUtil;
+import com.dashcam.base.MyAPP;
+import com.dashcam.photovedio.FileUtil;
 import com.itgoyo.logtofilelibrary.LogToFileUtils;
 
 import java.io.ByteArrayOutputStream;
@@ -30,7 +33,7 @@ public class UDPClient implements Runnable {
     private static DatagramPacket packetSend, packetRcv;
     private boolean udpLife = true; //udp生命线程
     private byte[] msgRcv = new byte[1024]; //接收消息
-
+     int TimeoutCs=0;
     public UDPClient() {
         super();
     }
@@ -99,7 +102,7 @@ public class UDPClient implements Runnable {
 
         try {
             socket = new DatagramSocket();
-            socket.setSoTimeout(12000);
+            socket.setSoTimeout(20000);
         } catch (SocketException e) {
             LogToFileUtils.write("udpClient,建立接收数据报失败" + e.toString());//写入日志
             Log.i("udpClient", "建立接收数据报失败");
@@ -116,12 +119,31 @@ public class UDPClient implements Runnable {
                 Intent RcvIntent = new Intent();
                 RcvIntent.setAction("udpRcvMsg");
                 RcvIntent.putExtra("udpRcvMsg", RcvMsg);
+                if (TimeoutCs>3){
+                    TimeoutCs=0;
+                    Intent intent = new Intent();
+                    intent.setAction("com.dashcam.intent.REQUEST_GO_SLEEP");
+                    LogToFileUtils.write("xiumianguangbo send");//写入日志
+                    if (MyAPP.Debug) {
+                        MainActivity.context.sendBroadcast(intent);
+                    }
+                }
                 MainActivity.context.sendBroadcast(RcvIntent);
 
                 Log.i("Rcv", RcvMsg);
             } catch (Exception e) {
                 Log.i("Udp", "接收超时"+e.toString());
                 LogToFileUtils.write("udpClient, 接收超时");//写入日志
+                TimeoutCs=TimeoutCs+1;
+               // FileSUtil.wakeUpAndUnlock(MainActivity.context);
+                if (TimeoutCs>3){
+                    Intent intent = new Intent();
+                    intent.setAction("com.dashcam.intent.REQUEST_WAKE_UP");
+                    LogToFileUtils.write("xiumianguangbo send");//写入日志
+                    if (MyAPP.Debug) {
+                        MainActivity.context.sendBroadcast(intent);
+                    }
+                }
             /*    Intent RcvIntent = new Intent();
                 RcvIntent.setAction("ReBootUDP");
                 RcvIntent.putExtra("ReBootUDP", "111");

@@ -47,7 +47,7 @@ public class TCPClient implements Runnable{
     public void run() {
         try {
             socket = new Socket(serverIP,serverPort);
-            socket.setSoTimeout(12000);
+            socket.setSoTimeout(20000);
             pw = new PrintWriter(socket.getOutputStream(),true);
             is = socket.getInputStream();
             dis = new DataInputStream(is);
