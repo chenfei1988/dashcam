@@ -367,6 +367,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
+        LogToFileUtils.write("surfaceDestroyed:closeCamera");//写入日志
         closeCamera();
       /*  if (mRunInBackground)
             startPreview();*/
