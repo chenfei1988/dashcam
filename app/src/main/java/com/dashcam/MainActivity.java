@@ -96,7 +96,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import butterknife.Bind;
 import butterknife.ButterKnife;
 import okhttp3.Call;
@@ -142,13 +141,12 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     private final MyBroadcastReceiver myBroadcastReceiver = new MyBroadcastReceiver();
     //   private boolean IsCharge = false;//是否充电
     //   private boolean IsCarStop = false;//超过5分钟静止
-
     LocationUtil mLocationUtil;
     public static String rootPath = "";//存放视频的路径
     int Batterylevel = 100;//电池电量
     private String phonenumber = "";
+    private String iccid = "";
     private String G4Itedbm = "";//4G信号强弱
-
     public static boolean IsZhualu = false;//是否在抓录视频
     public static boolean IsPengZhuang = false;//是否是碰撞
     int cishu = 0;//上传3次，不成功退出
@@ -164,7 +162,6 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     private int ZhuapaiStatus = 1;//1:微信抓拍，2，电源键抓拍 3，碰撞抓拍，4，充电抓拍 5，语音抓拍 6 抓录视频
     public static boolean IsBackCamera = true; //是否是车外镜头
     ZhuapaiRunnable runnable_zhuai = new ZhuapaiRunnable();
-    private Thread mThread;
     PowerManager powerManager = null;
    // PowerManager.WakeLock wakeLock = null;
     private boolean IsDestoryed = false;
@@ -173,10 +170,8 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     private boolean IsGpsPlay = true;//是否播放GPS信号弱
     private boolean IsDYQH = false;//是否电源切换
     private boolean IsPZQJ = false;//是否碰撞期间
-
-    public TelephonyManager mTelephonyManager;
-    public PhoneStatListener mListener;
-
+    AlarmManager alarmManager;
+    private PendingIntent pendingIntent;
     // private Timer recordtimer;
     private class MyHandler extends Handler {
 
@@ -233,7 +228,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         context = this;
         initViews();
         initData();
-
+      //  SetAlarm();
         //  setBrightnessMode();//开启Wifi
     }
 
@@ -248,9 +243,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         }*/
         try {
             phonenumber = new PhoneInfoUtils(context).getNativePhoneNumber();
-            if (phonenumber == null) {
-                phonenumber = "";
-            }
+            iccid = new PhoneInfoUtils(context).getIccid();
         } catch (Exception e) {
             LogToFileUtils.write("phonenum get failed" + e.toString());
         }
@@ -361,6 +354,12 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         super.onPause();
     }
 
+    private void SetAlarm(){
+        alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent("WAKE_UP");
+        pendingIntent = PendingIntent.getBroadcast(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        alarmManager.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,SystemClock.elapsedRealtime(), pendingIntent);
+    }
     TimerTask task = new TimerTask() {
         @Override
         public void run() {
@@ -469,6 +468,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         IntentFilter intentFilter9 = new IntentFilter("com.dashcam.intent.SEND_DATA_USAGE");//获取流量
         IntentFilter intentFilter10 = new IntentFilter(Intent.ACTION_POWER_DISCONNECTED);
         IntentFilter intentFilter11 = new IntentFilter("ReBootUDP");//重启TCP
+        IntentFilter intentFilter12 = new IntentFilter("WAKE_UP");//重启TCP
         registerReceiver(myBroadcastReceiver, intentFilter1);
         registerReceiver(myBroadcastReceiver, intentFilter2);
         registerReceiver(myBroadcastReceiver, intentFilter3);
@@ -480,6 +480,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         registerReceiver(myBroadcastReceiver, intentFilter9);
         registerReceiver(myBroadcastReceiver, intentFilter10);
         registerReceiver(myBroadcastReceiver, intentFilter11);
+        registerReceiver(myBroadcastReceiver, intentFilter12);
         /*
         给底层发送广播，获取流量
          */
@@ -509,13 +510,16 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     exec.execute(client);
                     break;
                 case "android.intent.GO_SUSPEND":  //进入休眠
-
                     LogToFileUtils.write("android.intent.GO_SUSPEND");
-                    IntoXiumian();
+                    LogToFileUtils.write("jin ru xiu mian");
+                    if (!IsXiumian){
+                        IntoXiumian();
+                    }
                     break;
                 case Intent.ACTION_POWER_DISCONNECTED:  //断开电源进入休眠状态
-                    LogToFileUtils.write("duankai dian yuan");
                     IsCharging = false;
+                  /*  LogToFileUtils.write("duankai dian yuan");
+
                     IsDYQH=true;
                     new Handler().postDelayed(new Runnable() {
                         @Override
@@ -529,7 +533,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                                 myHandler.sendEmptyMessage(9);
                             }
                         }
-                    }, 60000);
+                    }, 60000);*/
                     ;
                     break;
                 case Intent.ACTION_POWER_CONNECTED:  //退出休眠
@@ -623,6 +627,18 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         }
                     }).start();
                     break;
+                case "WAKE_UP":
+                    if (IsXiumian) {
+                        String sendtext = "*" + IMEI + ",1,"
+                                + GPSSTR + "#";
+                        LogToFileUtils.write("xiumian xintiaobao " + sendtext);//写入日志
+                        boolean status = client.send(sendtext);
+                        if (!status) {
+                            LogToFileUtils.write("udpClient,发送数据失败");//写入日志
+                        }
+                    }
+                    alarmManager.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + 15000, pendingIntent);
+                    break;
                 default:
                     break;
             }
@@ -630,10 +646,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     }
 
     private synchronized void GetZhilingType(String msg) {
-        //  if (!IsXiumian) {
-        LogToFileUtils.write("CommandMsg:" + msg);//写入日志
-        Log.e("CommandMsg", msg);
-        //  }
+
         if (msg.contains("*") && msg.contains("#")) {
             msg = msg.replace("*", "").replace("#", "");
         }
@@ -652,7 +665,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         } else if (lushu.equals("1")) {
                             long currenttime = Calendar.getInstance().getTimeInMillis();
                             LogToFileUtils.write(currenttime - lasttakepictime + "");
-                            if (currenttime - lasttakepictime > 7000) {
+                            if (currenttime - lasttakepictime > 10000) {
                                 lasttakepictime = currenttime;
                                 ZhuapaiStatus = 1;
                                 IsBackCamera = false;
@@ -1177,25 +1190,25 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
+
         IsDestoryed = true;
         cameraSurfaceView.closeCamera();
         LogToFileUtils.write("closeCamera");//写入日志
         // mVideoServer.stop();
         //  task.cancel();
-        mTelephonyManager.listen(mListener, PhoneStatListener.LISTEN_NONE);
         client.setUdpLife(false);
         Intent intent = new Intent();
         intent.setAction("com.dashcam.intent.STOP_RECORD");
         if (MyAPP.Debug) {
             sendBroadcast(intent);
         }
-           wakeup.send(SpeechConstant.WAKEUP_STOP, "{}", null, 0, 0);
-        if (timer1 != null) {
+        alarmManager.cancel(pendingIntent);
+        wakeup.send(SpeechConstant.WAKEUP_STOP, "{}", null, 0, 0);
+      /*  if (timer1 != null) {
             timer1.cancel();
             timer1 = null;
             task.cancel();
-        }
+        }*/
         if (timer3 != null) {
             timer3.cancel();
             timer3 = null;
@@ -1213,6 +1226,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         }
         mLocationUtil.stopLocate();
         //  releaseWakeLock();
+        super.onDestroy();
     }
 
 
@@ -2014,7 +2028,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                                 Thread.sleep(1500);
                                 cameraSurfaceView.closeCamera();
                                 LogToFileUtils.write("closeCamera");//写入日志
-                            /*    new Handler(getMainLooper()).postDelayed(new Runnable() {
+                                new Handler(getMainLooper()).postDelayed(new Runnable() {
                                     public void run() {
                                         if (!IsCharging) {
                                             Intent intent = new Intent();
@@ -2025,7 +2039,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                                             }
                                         }
                                     }
-                                }, 20000);*/
+                                }, 20000);
 
                             } catch (Exception e) {
                                 new Handler(getMainLooper()).postDelayed(new Runnable() {
@@ -2293,36 +2307,6 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
 
                 }
             }
-        }
-    }
-    /**
-     * 得到当前的手机蜂窝网络信号强度
-     * 获取LTE网络和3G/2G网络的信号强度的方式有一点不同，
-     * LTE网络强度是通过解析字符串获取的，
-     * 3G/2G网络信号强度是通过API接口函数完成的。
-     * asu 与 dbm 之间的换算关系是 dbm=-113 + 2*asu
-     */
-    public  void getCurrentNetDBM() {
-
-        //获取telephonyManager
-        mTelephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        //开始监听
-        mListener = new PhoneStatListener();
-        //监听信号强度
-        mTelephonyManager.listen(mListener, PhoneStatListener.LISTEN_SIGNAL_STRENGTHS);
-    }
-    private class PhoneStatListener extends PhoneStateListener {
-        //获取信号强度
-
-        @Override
-        public void onSignalStrengthsChanged(SignalStrength signalStrength) {
-            super.onSignalStrengthsChanged(signalStrength);
-            //获取网络信号强度
-            //获取0-4的5种信号级别，越大信号越好,但是api23开始才能用
-//            int level = signalStrength.getLevel();
-           // G4Itedbm = signalStrength.getLevel();
-            int asu = signalStrength.getGsmSignalStrength();
-
         }
     }
 }

@@ -4,14 +4,8 @@ import android.content.Intent;
 import android.util.Log;
 
 import com.dashcam.MainActivity;
-import com.dashcam.base.DateUtil;
-import com.dashcam.base.FileSUtil;
 import com.dashcam.base.MyAPP;
-import com.dashcam.photovedio.FileUtil;
 import com.itgoyo.logtofilelibrary.LogToFileUtils;
-
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
@@ -33,7 +27,8 @@ public class UDPClient implements Runnable {
     private static DatagramPacket packetSend, packetRcv;
     private boolean udpLife = true; //udp生命线程
     private byte[] msgRcv = new byte[1024]; //接收消息
-     int TimeoutCs=0;
+    private boolean ISTimeout = false;
+
     public UDPClient() {
         super();
     }
@@ -116,34 +111,36 @@ public class UDPClient implements Runnable {
                 socket.receive(packetRcv);
                 String RcvMsg = new String(packetRcv.getData(), packetRcv.getOffset(), packetRcv.getLength());
                 //将收到的消息发给主界面
+                LogToFileUtils.write("CommandMsg:" + RcvMsg);//写入日志
+                Log.e("CommandMsg", RcvMsg);
                 Intent RcvIntent = new Intent();
                 RcvIntent.setAction("udpRcvMsg");
                 RcvIntent.putExtra("udpRcvMsg", RcvMsg);
-                if (TimeoutCs>3){
-                    TimeoutCs=0;
+                MainActivity.context.sendBroadcast(RcvIntent);
+                if (ISTimeout) {
                     Intent intent = new Intent();
                     intent.setAction("com.dashcam.intent.REQUEST_GO_SLEEP");
-                    LogToFileUtils.write("xiumianguangbo send");//写入日志
+                    LogToFileUtils.write("com.dashcam.intent.REQUEST_GO_SLEEP guangbo send");//写入日志
                     if (MyAPP.Debug) {
                         MainActivity.context.sendBroadcast(intent);
                     }
+                    ISTimeout = false;
                 }
-                MainActivity.context.sendBroadcast(RcvIntent);
+
 
                 Log.i("Rcv", RcvMsg);
             } catch (Exception e) {
-                Log.i("Udp", "接收超时"+e.toString());
-                LogToFileUtils.write("udpClient, 接收超时");//写入日志
-                TimeoutCs=TimeoutCs+1;
-               // FileSUtil.wakeUpAndUnlock(MainActivity.context);
-                if (TimeoutCs>3){
-                    Intent intent = new Intent();
-                    intent.setAction("com.dashcam.intent.REQUEST_WAKE_UP");
-                    LogToFileUtils.write("xiumianguangbo send");//写入日志
-                    if (MyAPP.Debug) {
-                        MainActivity.context.sendBroadcast(intent);
-                    }
+                Log.i("Udp", "接收超时" + e.toString());
+                LogToFileUtils.write("udpClient, 接收超时"+ e.toString());//写入日志
+                //  FileSUtil.wakeUpAndUnlock(MainActivity.context);
+                Intent intent = new Intent();
+                intent.setAction("com.dashcam.intent.REQUEST_WAKE_UP");
+                LogToFileUtils.write("com.dashcam.intent.REQUEST_WAKE_UP guangbo send");//写入日志
+                if (MyAPP.Debug) {
+                    MainActivity.context.sendBroadcast(intent);
                 }
+                ISTimeout =true;
+                //  }
             /*    Intent RcvIntent = new Intent();
                 RcvIntent.setAction("ReBootUDP");
                 RcvIntent.putExtra("ReBootUDP", "111");

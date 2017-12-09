@@ -367,9 +367,9 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        stopPreview();
-        if (mRunInBackground)
-            startPreview();
+        closeCamera();
+      /*  if (mRunInBackground)
+            startPreview();*/
     }
 
     protected CameraState cameraState;
