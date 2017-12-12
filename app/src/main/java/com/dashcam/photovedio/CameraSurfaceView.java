@@ -18,9 +18,9 @@ import android.view.SurfaceView;
 import com.dashcam.MainActivity;
 import com.dashcam.base.DateUtil;
 import com.dashcam.base.FileSUtil;
+import com.dashcam.base.LogToFileUtils;
 import com.dashcam.base.MyAPP;
 import com.dashcam.base.RefreshEvent;
-import com.itgoyo.logtofilelibrary.LogToFileUtils;
 
 import org.greenrobot.eventbus.EventBus;
 

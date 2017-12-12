@@ -58,6 +58,7 @@ import com.dashcam.base.DateUtils;
 import com.dashcam.base.FileInfo;
 import com.dashcam.base.FileSUtil;
 import com.dashcam.base.HomeListener;
+import com.dashcam.base.LogToFileUtils;
 import com.dashcam.base.MyAPP;
 import com.dashcam.base.NetworkStatsHelper;
 import com.dashcam.base.PhoneInfoUtils;
@@ -70,7 +71,6 @@ import com.dashcam.photovedio.CheckPermissionsUtil;
 import com.dashcam.photovedio.FileUtil;
 import com.dashcam.udp.TCPClient;
 import com.dashcam.udp.UDPClient;
-import com.itgoyo.logtofilelibrary.LogToFileUtils;
 import com.lzy.okhttputils.OkHttpUtils;
 import com.lzy.okhttputils.callback.StringCallback;
 

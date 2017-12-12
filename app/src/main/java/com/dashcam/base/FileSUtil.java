@@ -33,7 +33,6 @@ import android.os.Environment;
 import android.os.PowerManager;
 import android.text.TextUtils;
 
-import com.itgoyo.logtofilelibrary.LogToFileUtils;
 
 /**
  * <h3>File工具类</h3>

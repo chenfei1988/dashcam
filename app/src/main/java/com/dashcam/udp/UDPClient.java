@@ -4,8 +4,8 @@ import android.content.Intent;
 import android.util.Log;
 
 import com.dashcam.MainActivity;
+import com.dashcam.base.LogToFileUtils;
 import com.dashcam.base.MyAPP;
-import com.itgoyo.logtofilelibrary.LogToFileUtils;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
@@ -61,18 +61,6 @@ public class UDPClient implements Runnable {
             return false;
         }
 
-/*        try {
-            socket = new DatagramSocket();
-        } catch (SocketException e) {
-            Log.i("udpClient","建立发送数据报失败");
-            e.printStackTrace();
-        }*/
-       /* ByteArrayOutputStream ostream = new ByteArrayOutputStream();
-        DataOutputStream dataStream = new DataOutputStream(ostream);
-        dataStream.writeUTF(msgSend);
-        dataStream.close();
-        byte[] data = ostream.toByteArray();*/
-        // packetSend = new DatagramPacket(data , data.length,hostAddress,udpPort);
         String newmsg = null;
         try {
             newmsg = URLDecoder.decode(msgSend, "GB2312");

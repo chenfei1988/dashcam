@@ -13,8 +13,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.PowerManager;
 import android.util.Log;
 import android.view.WindowManager;
-
-import com.itgoyo.logtofilelibrary.LogToFileUtils;
 import com.lzy.okhttputils.OkHttpUtils;
 import com.lzy.okhttputils.cookie.store.PersistentCookieStore;
 import java.io.IOException;
