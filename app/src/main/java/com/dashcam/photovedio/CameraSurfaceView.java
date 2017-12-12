@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 import static android.hardware.Camera.Parameters.FLASH_MODE_OFF;
 
@@ -44,8 +45,8 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     /* protected static final int[] VIDEO_320 = {320, 240};
      protected static final int[] VIDEO_480 = {640, 480};*/
-    private int PIC_SIZE_WIDTH = 1280;
-    private int PIC_SIZE_HEIGHT = 720;
+    private int PIC_SIZE_WIDTH = 1920;
+    private int PIC_SIZE_HEIGHT = 1080;
     protected static final int[] VIDEO_2160 = {3600, 2160};
     protected static final int[] VIDEO_1080 = {1920, 1080};
 
@@ -258,25 +259,37 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             //  mParam.setRotation(0);
             //  Camera.Size previewSize = CamParaUtil.getSize(mParam.getSupportedPreviewSizes(), 1000,
             if (mOpenBackCamera) {
-                PIC_SIZE_WIDTH = 1280;
-                PIC_SIZE_HEIGHT = 720;
+                PIC_SIZE_WIDTH = 1920;
+                PIC_SIZE_HEIGHT = 1080;
             } else {
                 PIC_SIZE_WIDTH = 640;
                 PIC_SIZE_HEIGHT = 480;
             }
-            Camera.Size previewSize = CamParaUtil.getSize(mParam.getSupportedPreviewSizes(), 1000,
+            Camera.Size previewSize = CamParaUtil.getSize(null, 1200,
                     mCamera.new Size(PIC_SIZE_WIDTH, PIC_SIZE_HEIGHT));
             mParam.setPreviewSize(previewSize.width, previewSize.height);
             int yuv_buffersize = previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewformat) / 8;
             previewBuffer = new byte[yuv_buffersize];
+            Camera.Size pictureSize = CamParaUtil.getSize(null, 1200,
+                    mCamera.new Size(PIC_SIZE_WIDTH, PIC_SIZE_HEIGHT));
+            mParam.setPictureSize(pictureSize.width, pictureSize.height);
+            if (CamParaUtil.isSupportedFormats(mParam.getSupportedPictureFormats(), ImageFormat.JPEG)) {
+                mParam.setPictureFormat(ImageFormat.JPEG);
+                mParam.setJpegQuality(100);
+            }
+          /*  Camera.Size previewSize = CamParaUtil.getSize(mParam.getSupportedPreviewSizes(), 2000,
+                    mCamera.new Size(1920, 1080));
+            mParam.setPreviewSize(previewSize.width, previewSize.height);
+            int yuv_buffersize = previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewformat) / 8;
+            previewBuffer = new byte[yuv_buffersize];
             //  Camera.Size pictureSize = CamParaUtil.getSize(mParam.getSupportedPictureSizes(), 2000,
-            Camera.Size pictureSize = CamParaUtil.getSize(null, 1000,
+            Camera.Size pictureSize = CamParaUtil.getSize(null, 1500,
                     mCamera.new Size(PIC_SIZE_WIDTH, PIC_SIZE_HEIGHT));
             mParam.setPictureSize(pictureSize.width, pictureSize.height);
             if (CamParaUtil.isSupportedFormats(mParam.getSupportedPictureFormats(), ImageFormat.JPEG)) {
                 mParam.setPictureFormat(ImageFormat.JPEG);
                 mParam.setJpegQuality(95);
-            }
+            }*/
         /*    if (CamParaUtil.isSupportedFocusMode(mParam.getSupportedFocusModes(), FOCUS_MODE_AUTO)) {
                 mParam.setFocusMode(FOCUS_MODE_AUTO);
             }*/
@@ -492,6 +505,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                                     Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
                                     String photopath = saveBitmap(bitmap);
                                     bitmap.recycle();
+                                    EventBus.getDefault().post(new RefreshEvent(1, photopath, ""));
                                     Thread.sleep(3000);
                                     isTakePic = false;
                                    // mCamera.startPreview();
@@ -597,7 +611,11 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             //   Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
             if (MainActivity.IsZhualu) {
                 EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
-            } else {
+            }
+            else  if(MainActivity.IsYDSP){
+                FileUtil.MoveFiletoDangerFile(currentVediopah,rootPath);
+            }
+            else {
                 Intent intent = new Intent();
                 intent.setAction("com.dashcam.intent.STOP_RECORD");
                 if (MyAPP.Debug) {

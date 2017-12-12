@@ -12,6 +12,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URLDecoder;
 import java.net.UnknownHostException;
 
@@ -28,7 +29,6 @@ public class UDPClient implements Runnable {
     private boolean udpLife = true; //udp生命线程
     private byte[] msgRcv = new byte[1024]; //接收消息
     private boolean ISTimeout = false;
-
     public UDPClient() {
         super();
     }
@@ -97,7 +97,7 @@ public class UDPClient implements Runnable {
 
         try {
             socket = new DatagramSocket();
-            socket.setSoTimeout(3*60*1000);
+            socket.setSoTimeout(2*60*1000);
         } catch (SocketException e) {
             LogToFileUtils.write("udpClient,建立接收数据报失败" + e.toString());//写入日志
             Log.i("udpClient", "建立接收数据报失败");
@@ -118,34 +118,50 @@ public class UDPClient implements Runnable {
                 RcvIntent.putExtra("udpRcvMsg", RcvMsg);
                 MainActivity.context.sendBroadcast(RcvIntent);
                 if (MainActivity.IsXiumian) {
+                    if (ISTimeout) {
                     Intent intent = new Intent();
                     intent.setAction("com.dashcam.intent.REQUEST_GO_SLEEP");
                     LogToFileUtils.write("com.dashcam.intent.REQUEST_GO_SLEEP guangbo send");//写入日志
                     if (MyAPP.Debug) {
                         MainActivity.context.sendBroadcast(intent);
                     }
+                        ISTimeout = false;
+                    }
                 }
            //         ISTimeout = false;
            //     }*/
                 Log.i("Rcv", RcvMsg);
-            } catch (Exception e) {
+            } catch (SocketTimeoutException e) {
                 Log.i("Udp", "接收超时" + e.toString());
                 LogToFileUtils.write("udpClient, 接收超时"+ e.toString());//写入日志
                 //  FileSUtil.wakeUpAndUnlock(MainActivity.context);
-                Intent intent = new Intent();
-                intent.setAction("com.dashcam.intent.REQUEST_WAKE_UP");
-                LogToFileUtils.write("com.dashcam.intent.REQUEST_WAKE_UP guangbo send");//写入日志
-                if (MyAPP.Debug) {
-                    MainActivity.context.sendBroadcast(intent);
+                ISTimeout = true;
+                if (MainActivity.IsXiumian) {
+
+                        Intent intent = new Intent();
+                        intent.setAction("com.dashcam.intent.REQUEST_WAKE_UP");
+                        LogToFileUtils.write("com.dashcam.intent.REQUEST_WAKE_UP guangbo send");//写入日志
+                        if (MyAPP.Debug) {
+                            MainActivity.context.sendBroadcast(intent);
+                        }
+
                 }
-                ISTimeout =true;
-                //  }
-            /*    Intent RcvIntent = new Intent();
-                RcvIntent.setAction("ReBootUDP");
-                RcvIntent.putExtra("ReBootUDP", "111");
-                MainActivity.context.sendBroadcast(RcvIntent);
-                udpLife=false;*/
                 e.printStackTrace();
+            }
+            catch (Exception e) {
+                try {
+                    socket = new DatagramSocket();
+                    socket.setSoTimeout(2*60*1000+30*1000);
+                } catch (SocketException e1) {
+                    LogToFileUtils.write("udpClient,建立接收数据报失败" + e.toString());//写入日志
+                    Log.i("udpClient", "建立接收数据报失败");
+                    e.printStackTrace();
+                }
+                packetRcv = new DatagramPacket(msgRcv, msgRcv.length);
+                Log.i("Udp",   e.toString());
+                LogToFileUtils.write("udpClient"+ e.toString());//写入日志
+                //  FileSUtil.wakeUpAndUnlock(MainActivity.context);
+
             }
         }
 

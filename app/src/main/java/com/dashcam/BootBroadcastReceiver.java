@@ -24,6 +24,7 @@ public class BootBroadcastReceiver extends BroadcastReceiver {
                 Thread.sleep(10000L);
                 final Intent mainActivityIntent = new Intent(context, MainActivity.class);  // 要启动的Activity
                 mainActivityIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                mainActivityIntent.putExtra("boot",true);
                 final Context mContext = context;
                 new Handler().postDelayed(new Runnable(){
                     public void run() {

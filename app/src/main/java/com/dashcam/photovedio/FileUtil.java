@@ -335,10 +335,18 @@ public class FileUtil {
         for (int i = 0; i < files.length; i++) {
             File file = files[i];
             long filetime = file.lastModified();
-            if (Math.abs(filetime - currenttime) < 3 * 60 * 1000) {
+            if (Math.abs(filetime - currenttime) < 2 * 60 * 1000) {
                 copyFile(file.getPath(), rootpath + "/EmergencyVideo/" + file.getName());
             }
         }
+    }
+    public static void MoveFiletoDangerFile( String filepath,String rootpath) {
+
+        File file = new File(filepath);
+        if (!file.exists()) {
+            return;
+        }
+        copyFile(filepath, rootpath + "/EmergencyVideo/" + file.getName());
     }
 
     /**
