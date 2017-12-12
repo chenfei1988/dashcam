@@ -65,7 +65,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     public static int Recordtime = 1000 * 60 * 3;
     public static int[] VIDEO_SIZE = {1280, 720};
     public static int mencode = MediaRecorder.VideoEncoder.MPEG_4_SP;
-
+    private boolean isTakePic = false;
 
     public CameraSurfaceView(Context context) {
         super(context);
@@ -100,12 +100,13 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         mSurfaceHolder = getHolder();
         mSurfaceHolder.addCallback(this);
         mSurfaceTexture = new SurfaceTexture(10);
+        startPreview();
         post(new Runnable() {
             @Override
             public void run() {
                 if (!isAttachedWindow) {
                     mRunInBackground = true;
-                    startPreview();
+
                 }
             }
         });
@@ -278,6 +279,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 mParam.set("orientation", "landscape");
                 mCamera.setDisplayOrientation(0);
             }
+            mCamera.setPreviewTexture(mSurfaceTexture);
             if (mRunInBackground) {
                 mCamera.setPreviewTexture(mSurfaceTexture);
                 mCamera.addCallbackBuffer(previewBuffer);
@@ -399,24 +401,35 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     }
 
     public void onAutoFocus(Camera camera) {
-        try {
-            mCamera.takePicture(new Camera.ShutterCallback() {
-                @Override
-                public void onShutter() {
-                    LogToFileUtils.write("paizhao voice" + "played");
-                }
-            }, null, new Camera.PictureCallback() {
-                @Override
-                public void onPictureTaken(byte[] data, Camera camera) {
-                    mCamera.cancelAutoFocus();
-                    LogToFileUtils.write("huoqu pic data" + "success");
-                    Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                    String photopath = saveBitmap(bitmap);
-                    EventBus.getDefault().post(new RefreshEvent(1, photopath, ""));
-                }
-            });
-        } catch (Exception e) {
-            LogToFileUtils.write("Take takePicture " + e.toString());
+        if (!isTakePic) {
+            try {
+                isTakePic =true;
+                mCamera.takePicture(new Camera.ShutterCallback() {
+                    @Override
+                    public void onShutter() {
+                        LogToFileUtils.write("paizhao voice" + "played");
+                    }
+                }, null, new Camera.PictureCallback() {
+                    @Override
+                    public void onPictureTaken(byte[] data, Camera camera) {
+                        try {
+                            mCamera.cancelAutoFocus();
+                            LogToFileUtils.write("huoqu pic data" + "success");
+                            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                            String photopath = saveBitmap(bitmap);
+                            bitmap.recycle();
+                            EventBus.getDefault().post(new RefreshEvent(1, photopath, ""));
+                            Thread.sleep(3000);
+                            isTakePic = false;
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
+
+            } catch (Exception e) {
+                LogToFileUtils.write("Take takePicture " + e.toString());
+            }
         }
     }
 
@@ -507,7 +520,10 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 //   Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
                 if (MainActivity.IsZhualu) {
                     EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
-                } else {
+                }
+                else  if(MainActivity.IsYDSP){
+                    FileUtil.MoveFiletoDangerFile(currentVediopah,rootPath);
+                }else {
                     Intent intent = new Intent();
                     intent.setAction("com.dashcam.intent.STOP_RECORD");
                     if (MyAPP.Debug) {
