@@ -6,7 +6,9 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
+import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.media.AudioManager;
 import android.media.MediaRecorder;
@@ -25,6 +27,7 @@ import com.itgoyo.logtofilelibrary.LogToFileUtils;
 import org.greenrobot.eventbus.EventBus;
 
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -35,7 +38,9 @@ import java.util.Date;
 import static android.hardware.Camera.Parameters.FLASH_MODE_OFF;
 
 
-public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Callback {
+public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Callback
+    //    , Camera.PreviewCallback
+{
 
     /* protected static final int[] VIDEO_320 = {320, 240};
      protected static final int[] VIDEO_480 = {640, 480};*/
@@ -46,6 +51,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     private int screenOritation = Configuration.ORIENTATION_PORTRAIT;
     private boolean mOpenBackCamera = true;
+    private boolean isTakePic = false;
     private SurfaceHolder mSurfaceHolder;
     private SurfaceTexture mSurfaceTexture;
     private boolean mRunInBackground = false;
@@ -109,6 +115,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 }
             }
         });
+
     }
 
     @Override
@@ -186,11 +193,13 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             closeCamera();
             LogToFileUtils.write("closeCamera:" + "");
             Log.e("closeCamera:", "");
-            openCamera();
-            LogToFileUtils.write("openCamera:" + "");
-            Log.e("openCamera:", "");
+
             try {
-                Thread.sleep(1000);
+                Thread.sleep(500);
+                openCamera();
+                LogToFileUtils.write("openCamera:" + "");
+                Log.e("openCamera:", "");
+                Thread.sleep(1500);
                 startPreview();
                 LogToFileUtils.write("startPreview:" + "");
                 Log.e("startPreview:", "");
@@ -255,7 +264,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 PIC_SIZE_WIDTH = 640;
                 PIC_SIZE_HEIGHT = 480;
             }
-            Camera.Size previewSize = CamParaUtil.getSize(null, 1000,
+            Camera.Size previewSize = CamParaUtil.getSize(mParam.getSupportedPreviewSizes(), 1000,
                     mCamera.new Size(PIC_SIZE_WIDTH, PIC_SIZE_HEIGHT));
             mParam.setPreviewSize(previewSize.width, previewSize.height);
             int yuv_buffersize = previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewformat) / 8;
@@ -278,8 +287,9 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 mParam.set("orientation", "landscape");
                 mCamera.setDisplayOrientation(0);
             }
+            mCamera.setPreviewTexture(mSurfaceTexture);
             if (mRunInBackground) {
-                mCamera.setPreviewTexture(mSurfaceTexture);
+
                 mCamera.addCallbackBuffer(previewBuffer);
 //                mCamera.setPreviewCallbackWithBuffer(previewCallback);//设置摄像头预览帧回调
             } else {
@@ -301,6 +311,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                     cameraStateListener.onCameraStateChange(cameraState);
                 }
             }
+          //  mCamera.setPreviewCallback(this);
             LogToFileUtils.write("startPreview success");//写入日志
         } catch (Exception e) {
             LogToFileUtils.write("startPreview Failed" + e.toString());//写入日志
@@ -376,6 +387,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     protected CameraState cameraState;
     private CameraStateListener cameraStateListener;
 
+
     public enum CameraState {
         START, PREVIEW, STOP, ERROR
     }
@@ -392,32 +404,110 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     /**
      * ___________________________________以下为拍照模块______________________________________
      **/
+/*
+   @Override
+    public void onPreviewFrame(byte[] data, Camera camera) {
+        byte[] rawImage;
+        Bitmap bitmap;
+        try {
+            if (isTakePic) {
+                LogToFileUtils.write("onPreviewFrame Take takePicture begin");
+                isTakePic = false;
+              //  Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                mCamera.startPreview();
+                Camera.Size previewSize = camera.getParameters().getPreviewSize();//获取尺寸,格式转换的时候要用到
+                BitmapFactory.Options newOpts = new BitmapFactory.Options();
+                newOpts.inJustDecodeBounds = true;
+                YuvImage yuvimage = new YuvImage(
+                        data,
+                        ImageFormat.NV21,
+                        previewSize.width,
+                        previewSize.height,
+                        null);
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                yuvimage.compressToJpeg(new Rect(0, 0, previewSize.width, previewSize.height), 100, baos);// 80--JPG图片的质量[0-100],100最高
+                rawImage = baos.toByteArray();
+                //将rawImage转换成bitmap
+                BitmapFactory.Options options = new BitmapFactory.Options();
+                options.inPreferredConfig = Bitmap.Config.RGB_565;
+                bitmap = BitmapFactory.decodeByteArray(rawImage, 0, rawImage.length, options);
+                String photopath = saveBitmap(bitmap);
+                bitmap.recycle();
+                EventBus.getDefault().post(new RefreshEvent(1, photopath, ""));
+            }
+        } catch (Exception e) {
+            LogToFileUtils.write("onPreviewFrame Take takePicture " + e.toString());
+        }
+
+    }*/
+
     public void capture() {
 
         if (mCamera == null) return;
-        onAutoFocus(mCamera);
+   //     if (isRecording){
+   //         isTakePic = true;
+    //    }
+   //    else{
+            onAutoFocus(mCamera);
+     //   }
     }
 
-    public void onAutoFocus(Camera camera) {
-        try {
-            mCamera.takePicture(new Camera.ShutterCallback() {
-                @Override
-                public void onShutter() {
-                    LogToFileUtils.write("paizhao voice" + "played");
+    public  void onAutoFocus(Camera camera) {
+                if (!isTakePic) {
+                    try {
+                        isTakePic =true;
+                        mCamera.takePicture(new Camera.ShutterCallback() {
+                            @Override
+                            public void onShutter() {
+                                LogToFileUtils.write("paizhao voice" + "played");
+                            }
+                        }, null, new Camera.PictureCallback() {
+                            @Override
+                            public void onPictureTaken(byte[] data, Camera camera) {
+                        /*     byte[] rawImage;
+                             Bitmap bitmap;
+                             mCamera.startPreview();
+                             LogToFileUtils.write("huoqu pic data" + "success");
+                             Camera.Size previewSize = camera.getParameters().getPreviewSize();//获取尺寸,格式转换的时候要用到
+                             BitmapFactory.Options newOpts = new BitmapFactory.Options();
+                             newOpts.inJustDecodeBounds = true;
+                             YuvImage yuvimage = new YuvImage(
+                                     data,
+                                     ImageFormat.NV21,
+                                     previewSize.width,
+                                     previewSize.height,
+                                     null);
+                             ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                             yuvimage.compressToJpeg(new Rect(0, 0, previewSize.width, previewSize.height), 95, baos);// 80--JPG图片的质量[0-100],100最高
+                             rawImage = baos.toByteArray();
+                             //将rawImage转换成bitmap
+                             BitmapFactory.Options options = new BitmapFactory.Options();
+                             options.inPreferredConfig = Bitmap.Config.RGB_565;
+                             bitmap = BitmapFactory.decodeByteArray(rawImage, 0, rawImage.length, options);
+                             String photopath = saveBitmap(bitmap);
+                             bitmap.recycle();
+                             EventBus.getDefault().post(new RefreshEvent(1, photopath, ""));*/
+                           //     EventBus.getDefault().post(new RefreshEvent(1, photopath, ""));
+                                try {
+                                    Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                                    String photopath = saveBitmap(bitmap);
+                                    bitmap.recycle();
+                                    Thread.sleep(3000);
+                                    isTakePic = false;
+                                   // mCamera.startPreview();
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+
+                            }
+                        });
+
+                    } catch (Exception e) {
+                      //  ResetCamara();
+                      //  mCamera.startPreview();
+                        LogToFileUtils.write("Take takePicture " + e.toString());
+                    }
                 }
-            }, null, new Camera.PictureCallback() {
-                @Override
-                public void onPictureTaken(byte[] data, Camera camera) {
-                    mCamera.cancelAutoFocus();
-                    LogToFileUtils.write("huoqu pic data" + "success");
-                    Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                    String photopath = saveBitmap(bitmap);
-                    EventBus.getDefault().post(new RefreshEvent(1, photopath, ""));
-                }
-            });
-        } catch (Exception e) {
-            LogToFileUtils.write("Take takePicture " + e.toString());
-        }
     }
 
 
@@ -493,28 +583,28 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     public void stopRecord() {
         if (!isRecording) return;
-        mediaRecorder.setPreviewDisplay(null);
         try {
             Calendar mCalendar = Calendar.getInstance();
             long tamp = mCalendar.getTimeInMillis();// 1393844912
             if (tamp - starttimelamp < 2000) {
-                Thread.sleep(2000);
-                stopRecord();
+                Thread.sleep(3000);
+                // stopRecord();
+            }
+            mediaRecorder.setPreviewDisplay(null);
+            mediaRecorder.stop();
+            isRecording = false;
+            LogToFileUtils.write("video have saved in rootmulu");
+            //   Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
+            if (MainActivity.IsZhualu) {
+                EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
             } else {
-                mediaRecorder.stop();
-                isRecording = false;
-                LogToFileUtils.write("video have saved in rootmulu");
-                //   Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
-                if (MainActivity.IsZhualu) {
-                    EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
-                } else {
-                    Intent intent = new Intent();
-                    intent.setAction("com.dashcam.intent.STOP_RECORD");
-                    if (MyAPP.Debug) {
-                        context.sendBroadcast(intent);
-                    }
+                Intent intent = new Intent();
+                intent.setAction("com.dashcam.intent.STOP_RECORD");
+                if (MyAPP.Debug) {
+                    context.sendBroadcast(intent);
                 }
             }
+
             LogToFileUtils.write("stopRecord Success");
             //  videoDb.addDriveVideo(driveVideo);
         } catch (Exception e) {

@@ -46,8 +46,8 @@ import id.zelory.compressor.Compressor;
 import static android.content.Context.STORAGE_SERVICE;
 
 public class FileUtil {
-  //  private static final String rootPath = Environment.getExternalStorageDirectory().getAbsolutePath();
-  // private static final String rootPath= System.getenv("SECONDARY_STORAGE");;
+    //  private static final String rootPath = Environment.getExternalStorageDirectory().getAbsolutePath();
+    // private static final String rootPath= System.getenv("SECONDARY_STORAGE");;
 
 
     /**
@@ -74,7 +74,6 @@ public class FileUtil {
         long availableBlocks = stat.getAvailableBlocks();
         return blockSize * availableBlocks / 1024 / 1024;
     }
-
 
 
     /**
@@ -188,7 +187,7 @@ public class FileUtil {
      */
     public static boolean judgeTime3Time(String name, String time1, String time2) {
 
-      //  SimpleDateFormat sdf1 = new SimpleDateFormat("yyyyMMdd-HH:mm:ss");
+        //  SimpleDateFormat sdf1 = new SimpleDateFormat("yyyyMMdd-HH:mm:ss");
         SimpleDateFormat sdf1 = new SimpleDateFormat("yyyyMMdd_HHmmss");
         SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         try {
@@ -211,7 +210,7 @@ public class FileUtil {
         }
     }
 
-    public static String GetTimeFiles(String mVideoFilePath,String time1,String time2) {
+    public static String GetFilestring(String mVideoFilePath) {
 
         File file = new File(mVideoFilePath);
         if (!file.exists()) {
@@ -220,19 +219,40 @@ public class FileUtil {
         //取出文件列表：
         StringBuilder builder = new StringBuilder();
         final File[] files = file.listFiles();
-        for (File spec : files)
-        {
-            if (judgeTime3Time(spec.getName().replace(".mp4",""),time1,time2)){
+        for (File spec : files) {
+            builder.append(spec.getName());
+            builder.append(";");
+
+        }
+        String returnfilenames = "";
+        if (builder.toString().length() > 0) {
+            returnfilenames = builder.toString();
+            returnfilenames = returnfilenames.substring(0, returnfilenames.length() - 1);
+        }
+        return returnfilenames;
+    }
+
+    public static String GetTimeFiles(String mVideoFilePath, String time1, String time2) {
+
+        File file = new File(mVideoFilePath);
+        if (!file.exists()) {
+            return "";
+        }
+        //取出文件列表：
+        StringBuilder builder = new StringBuilder();
+        final File[] files = file.listFiles();
+        for (File spec : files) {
+            if (judgeTime3Time(spec.getName().replace(".mp4", ""), time1, time2)) {
                 builder.append(spec.getName());
                 builder.append(";");
             }
         }
         String returnfilenames = "";
-        if (builder.toString().length()>0){
-            returnfilenames =builder.toString();
-            returnfilenames=  returnfilenames.substring(0,returnfilenames.length()-1);
+        if (builder.toString().length() > 0) {
+            returnfilenames = builder.toString();
+            returnfilenames = returnfilenames.substring(0, returnfilenames.length() - 1);
         }
-       return  returnfilenames;
+        return returnfilenames;
     }
 
     public static String getStoragePath(Context mContext, boolean is_removale) {
@@ -265,6 +285,7 @@ public class FileUtil {
         }
         return null;
     }
+
     /**
      * 获取一个最大值
      *
@@ -304,54 +325,55 @@ public class FileUtil {
         return false;
     }
 
-    public  static  void MoveFiletoDangerFile(long currenttime,String rootpath){
+    public static void MoveFiletoDangerFile(long currenttime, String rootpath) {
 
-        File fileroot = new File(rootpath+"/video");
+        File fileroot = new File(rootpath + "/video");
         if (!fileroot.exists()) {
             return;
         }
         final File[] files = fileroot.listFiles();
         for (int i = 0; i < files.length; i++) {
             File file = files[i];
-             long filetime = file.lastModified();
-            if (Math.abs(filetime-currenttime)<3000*60){
-                copyFile(file.getPath(),rootpath+"/EmergencyVideo/"+file.getName());
+            long filetime = file.lastModified();
+            if (Math.abs(filetime - currenttime) < 3 * 60 * 1000) {
+                copyFile(file.getPath(), rootpath + "/EmergencyVideo/" + file.getName());
             }
         }
     }
 
     /**
-     *  复制单个文件
-     *  @param  oldPath  String  原文件路径  如：c:/fqf.txt
-     *  @param  newPath  String  复制后路径  如：f:/fqf.txt
-     *  @return  boolean
+     * 复制单个文件
+     *
+     * @param oldPath String  原文件路径  如：c:/fqf.txt
+     * @param newPath String  复制后路径  如：f:/fqf.txt
+     * @return boolean
      */
-    public static  void  copyFile(String  oldPath,  String  newPath)  {
-        try  {
+    public static void copyFile(String oldPath, String newPath) {
+        try {
 //           int  bytesum  =  0;
-            int  byteread  =  0;
-            File  oldfile  =  new  File(oldPath);
-            if  (oldfile.exists())  {  //文件存在时
-                InputStream  inStream  =  new FileInputStream(oldPath);  //读入原文件
-                FileOutputStream  fs  =  new  FileOutputStream(newPath);
-                byte[]  buffer  =  new  byte[1444];
+            int byteread = 0;
+            File oldfile = new File(oldPath);
+            if (oldfile.exists()) {  //文件存在时
+                InputStream inStream = new FileInputStream(oldPath);  //读入原文件
+                FileOutputStream fs = new FileOutputStream(newPath);
+                byte[] buffer = new byte[1444];
 //               int  length;
-                while  (  (byteread  =  inStream.read(buffer))  !=  -1)  {
+                while ((byteread = inStream.read(buffer)) != -1) {
 //                   bytesum  +=  byteread;  //字节数  文件大小
 //                   System.out.println(bytesum);
-                    fs.write(buffer,  0,  byteread);
+                    fs.write(buffer, 0, byteread);
                 }
                 inStream.close();
                 fs.close();
             }
-        }
-        catch  (Exception  e)  {
+        } catch (Exception e) {
             System.out.println("复制单个文件操作出错");
             e.printStackTrace();
 
         }
 
     }
+
     // 递归方式 计算文件的大小
     public static long getTotalSizeOfFilesInDir(final File file) {
         if (file.isFile())
@@ -361,6 +383,6 @@ public class FileUtil {
         if (children != null)
             for (final File child : children)
                 total += getTotalSizeOfFilesInDir(child);
-        return total/1024/1024;
+        return total / 1024 / 1024;
     }
 }

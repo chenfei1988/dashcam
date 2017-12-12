@@ -97,7 +97,7 @@ public class UDPClient implements Runnable {
 
         try {
             socket = new DatagramSocket();
-            socket.setSoTimeout(120000);
+            socket.setSoTimeout(3*60*1000);
         } catch (SocketException e) {
             LogToFileUtils.write("udpClient,建立接收数据报失败" + e.toString());//写入日志
             Log.i("udpClient", "建立接收数据报失败");
@@ -117,17 +117,16 @@ public class UDPClient implements Runnable {
                 RcvIntent.setAction("udpRcvMsg");
                 RcvIntent.putExtra("udpRcvMsg", RcvMsg);
                 MainActivity.context.sendBroadcast(RcvIntent);
-                if (ISTimeout) {
+                if (MainActivity.IsXiumian) {
                     Intent intent = new Intent();
                     intent.setAction("com.dashcam.intent.REQUEST_GO_SLEEP");
                     LogToFileUtils.write("com.dashcam.intent.REQUEST_GO_SLEEP guangbo send");//写入日志
                     if (MyAPP.Debug) {
                         MainActivity.context.sendBroadcast(intent);
                     }
-                    ISTimeout = false;
                 }
-
-
+           //         ISTimeout = false;
+           //     }*/
                 Log.i("Rcv", RcvMsg);
             } catch (Exception e) {
                 Log.i("Udp", "接收超时" + e.toString());
