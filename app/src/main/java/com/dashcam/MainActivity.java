@@ -2017,9 +2017,9 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                             } else {
                                 try {
                                     LogToFileUtils.write("start stopRecord");//写入日志
-                                  //  cameraSurfaceView.stopRecord();
-                                  //  LogToFileUtils.write("stopRecord");//写入日志
-                                  //  Thread.sleep(1000);
+                                    cameraSurfaceView.stopRecord();
+                                    LogToFileUtils.write("stopRecord");//写入日志
+                                    Thread.sleep(1000);
                                     cameraSurfaceView.setDefaultCamera(false);
                                     LogToFileUtils.write("setDefaultCamera");//写入日志
                                     Thread.sleep(1500);
