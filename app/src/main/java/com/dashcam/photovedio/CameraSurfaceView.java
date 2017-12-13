@@ -100,13 +100,12 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         mSurfaceHolder = getHolder();
         mSurfaceHolder.addCallback(this);
         mSurfaceTexture = new SurfaceTexture(10);
-        startPreview();
         post(new Runnable() {
             @Override
             public void run() {
                 if (!isAttachedWindow) {
                     mRunInBackground = true;
-
+                    startPreview();
                 }
             }
         });
@@ -250,8 +249,8 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             //  mParam.setRotation(0);
             //  Camera.Size previewSize = CamParaUtil.getSize(mParam.getSupportedPreviewSizes(), 1000,
             if (mOpenBackCamera) {
-                PIC_SIZE_WIDTH = 1280;
-                PIC_SIZE_HEIGHT = 720;
+                PIC_SIZE_WIDTH = 1920;
+                PIC_SIZE_HEIGHT = 1080;
             } else {
                 PIC_SIZE_WIDTH = 640;
                 PIC_SIZE_HEIGHT = 480;
@@ -279,7 +278,6 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 mParam.set("orientation", "landscape");
                 mCamera.setDisplayOrientation(0);
             }
-            mCamera.setPreviewTexture(mSurfaceTexture);
             if (mRunInBackground) {
                 mCamera.setPreviewTexture(mSurfaceTexture);
                 mCamera.addCallbackBuffer(previewBuffer);
@@ -523,7 +521,8 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 }
                 else  if(MainActivity.IsYDSP){
                     FileUtil.MoveFiletoDangerFile(currentVediopah,rootPath);
-                }else {
+                }
+                else {
                     Intent intent = new Intent();
                     intent.setAction("com.dashcam.intent.STOP_RECORD");
                     if (MyAPP.Debug) {
