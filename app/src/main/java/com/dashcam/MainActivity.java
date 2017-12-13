@@ -165,8 +165,8 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     PowerManager powerManager = null;
     // PowerManager.WakeLock wakeLock = null;
     private boolean IsDestoryed = false;
-    private long lastvideorecordtime = 0;//上次接受到抓录命令的时间
-    private long lasttakepictime = 0;//上次接受到抓录命令的时间
+    private long lasttakepicvediotime = 0;//上次接受到抓拍抓录命令的时间
+    //private long lasttakepictime = 0;//上次接受到抓录命令的时间
     private boolean IsGpsPlay = true;//是否播放GPS信号弱
     private boolean IsDYQH = false;//是否电源切换
     private boolean IsPZQJ = false;//是否碰撞期间
@@ -680,10 +680,10 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     if (types.length == 3) {
                         String lushu = types[2];
                         // (0 前置摄像头,1 后置摄像头)
-                        long currenttime = Calendar.getInstance().getTimeInMillis();
-                        LogToFileUtils.write(currenttime - lasttakepictime + "");
-                        if (currenttime - lasttakepictime > 15000) {
-                            lasttakepictime = currenttime;
+                        long currenttime = System.currentTimeMillis();
+                        LogToFileUtils.write(currenttime - lasttakepicvediotime + "");
+                        if (currenttime - lasttakepicvediotime > 20000) {
+                            lasttakepicvediotime = currenttime;
                             if (lushu.equals("0")) {
                                 ZhuapaiStatus = 1;
                                 IsBackCamera = true;
@@ -964,9 +964,9 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     }).start();
                     break;
                 case "80"://新增视频抓拍协议
-                    long currenttime = Calendar.getInstance().getTimeInMillis();
-                    if (currenttime - lastvideorecordtime > 20000) {
-                        lastvideorecordtime = currenttime;
+                    long currenttime = System.currentTimeMillis();
+                    if (currenttime - lasttakepicvediotime >20000) {
+                        lasttakepicvediotime = currenttime;
                         if (types.length == 3) {
                             String lushu = types[2];
                             // (1前置摄像头,0后置摄像头)
@@ -1970,7 +1970,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                                     Thread.sleep(1600);
                                     cameraSurfaceView.capture();
                                     LogToFileUtils.write("capture");//写入日志
-                                    Thread.sleep(1200);
+                                    Thread.sleep(1500);
                                     cameraSurfaceView.setDefaultCamera(true);
                                     LogToFileUtils.write("setDefaultCamera false");//写入日志
                                     Thread.sleep(1200);
@@ -2017,15 +2017,15 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                             } else {
                                 try {
                                     LogToFileUtils.write("start stopRecord");//写入日志
-                                    cameraSurfaceView.stopRecord();
-                                    LogToFileUtils.write("stopRecord");//写入日志
-                                    Thread.sleep(1000);
+                                  //  cameraSurfaceView.stopRecord();
+                                  //  LogToFileUtils.write("stopRecord");//写入日志
+                                  //  Thread.sleep(1000);
                                     cameraSurfaceView.setDefaultCamera(false);
                                     LogToFileUtils.write("setDefaultCamera");//写入日志
                                     Thread.sleep(1500);
                                     cameraSurfaceView.capture();
                                     LogToFileUtils.write("capture");//写入日志
-                                    Thread.sleep(1200);
+                                    Thread.sleep(1500);
                                     cameraSurfaceView.setDefaultCamera(true);
                                     LogToFileUtils.write("setDefaultCamera true");//写入日志
                                     Thread.sleep(1200);

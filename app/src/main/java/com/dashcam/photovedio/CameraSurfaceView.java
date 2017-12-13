@@ -181,7 +181,15 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             //Toast.makeText(context, "请先结束录像", Toast.LENGTH_SHORT).show();
             LogToFileUtils.write("ChangeCamera:" + "please stop recored video");
             Log.e("ChangeCamera:", "please stop recored video");
-            return false;
+            try {
+                Thread.sleep(3000);
+                if (isRecording) {
+                    return false;
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
         }
         mOpenBackCamera = backCamera;
         if (mCamera != null) {
@@ -261,7 +269,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 PIC_SIZE_HEIGHT = 480;
             }
             Camera.Size previewSize = CamParaUtil.getSize(null, 1000,
-                    mCamera.new Size(640, 480));
+                    mCamera.new Size(PIC_SIZE_WIDTH>1280?1280:PIC_SIZE_WIDTH, PIC_SIZE_HEIGHT>720?720:PIC_SIZE_HEIGHT));
             mParam.setPreviewSize(previewSize.width, previewSize.height);
             int yuv_buffersize = previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewformat) / 8;
             previewBuffer = new byte[yuv_buffersize];
@@ -489,8 +497,8 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         try {
             mediaRecorder.prepare();
             mediaRecorder.start();
-            Calendar mCalendar = Calendar.getInstance();
-            starttimelamp = mCalendar.getTimeInMillis();// 1393844912
+            //  Calendar mCalendar = Calendar.getInstance();
+            starttimelamp = System.currentTimeMillis();// 1393844912
             isRecording = true;
             Intent intent = new Intent();
             intent.setAction("com.dashcam.intent.START_RECORD");
@@ -511,43 +519,42 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     public void stopRecord() {
         if (!isRecording) return;
-        Calendar mCalendar = Calendar.getInstance();
-        long tamp = mCalendar.getTimeInMillis();// 1393844912
-        if (tamp - starttimelamp < 3000) {
+        long tamp = System.currentTimeMillis();// 1393844912
+        if (tamp - starttimelamp < 2000) {
             try {
-                Thread.sleep(3000);
+                Thread.sleep(1500);
             } catch (InterruptedException e) {
-                e.printStackTrace();
-            }//     stopRecord();
-        } else {
-            try {
-                if (mediaRecorder != null) {
-                    //设置后不会崩
-                    mediaRecorder.setOnErrorListener(null);
-                    mediaRecorder.setPreviewDisplay(null);
-                }
-                mediaRecorder.stop();
-                isRecording = false;
-                LogToFileUtils.write("video have saved in rootmulu");
-                //   Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
-                if (MainActivity.IsZhualu) {
-                    EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
-                } else if (MainActivity.IsYDSP) {
-                    FileUtil.MoveFiletoDangerFile(currentVediopah, rootPath);
-                } else {
-                    Intent intent = new Intent();
-                    intent.setAction("com.dashcam.intent.STOP_RECORD");
-                    if (MyAPP.Debug) {
-                        context.sendBroadcast(intent);
-                    }
-                }
-                LogToFileUtils.write("stopRecord Success");
-                //  videoDb.addDriveVideo(driveVideo);
-            } catch (Exception e) {
-                LogToFileUtils.write("stopRecord failed" + e.toString());//写入日志
                 e.printStackTrace();
             }
         }
+        try {
+            if (mediaRecorder != null) {
+                //设置后不会崩
+                mediaRecorder.setOnErrorListener(null);
+                mediaRecorder.setPreviewDisplay(null);
+            }
+            mediaRecorder.stop();
+            isRecording = false;
+            LogToFileUtils.write("video have saved in rootmulu");
+            //   Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
+            if (MainActivity.IsZhualu) {
+                EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
+            } else if (MainActivity.IsYDSP) {
+                FileUtil.MoveFiletoDangerFile(currentVediopah, rootPath);
+            } else {
+                Intent intent = new Intent();
+                intent.setAction("com.dashcam.intent.STOP_RECORD");
+                if (MyAPP.Debug) {
+                    context.sendBroadcast(intent);
+                }
+            }
+            LogToFileUtils.write("stopRecord Success");
+            //  videoDb.addDriveVideo(driveVideo);
+        } catch (Exception e) {
+            LogToFileUtils.write("stopRecord failed" + e.toString());//写入日志
+            e.printStackTrace();
+        }
+
     }
 
     /**
