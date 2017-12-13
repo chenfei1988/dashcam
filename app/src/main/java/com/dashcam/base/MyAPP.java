@@ -26,7 +26,7 @@ public class MyAPP extends Application {
 
 
     private static MyAPP sInstance;
-    public static boolean Debug = false;
+    public static boolean Debug = true;
     // 单例模式中获取唯一的MyApplication实例
     public static MyAPP getInstance() {
         if (sInstance == null) {

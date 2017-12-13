@@ -126,16 +126,18 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         if (mCameraId == -1) {
             mCameraId = 0;
         }
+        LogToFileUtils.write("mCameraId:" + mCameraId);
         try {
             mCamera = Camera.open(mCameraId);
         } catch (Exception ee) {
             LogToFileUtils.write("findCamera:" + ee.toString());
             Log.e("findCamera:", "findCamera failed" + ee.toString());
             mCamera = null;
-            cameraState = CameraState.ERROR;
+            mCamera = Camera.open(mCameraId);
+          /*  cameraState = CameraState.ERROR;
             if (cameraStateListener != null) {
                 cameraStateListener.onCameraStateChange(cameraState);
-            }
+            }*/
         }
         if (mCamera == null) {
             LogToFileUtils.write(mOpenBackCamera ? "Car OutSide Carmera openCamera Failed" : "Car Inside Carmera openCamera Failed");//写入日志
@@ -183,13 +185,15 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
         }
         mOpenBackCamera = backCamera;
         if (mCamera != null) {
-            closeCamera();
-            LogToFileUtils.write("closeCamera:" + "");
-            Log.e("closeCamera:", "");
-            openCamera();
-            LogToFileUtils.write("openCamera:" + "");
-            Log.e("openCamera:", "");
+
             try {
+                closeCamera();
+                LogToFileUtils.write("closeCamera:" + "");
+                Log.e("closeCamera:", "");
+                Thread.sleep(1000);
+                openCamera();
+                LogToFileUtils.write("openCamera:" + "");
+                Log.e("openCamera:", "");
                 Thread.sleep(1000);
                 startPreview();
                 LogToFileUtils.write("startPreview:" + "");
@@ -250,7 +254,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             //  Camera.Size previewSize = CamParaUtil.getSize(mParam.getSupportedPreviewSizes(), 1000,
             if (mOpenBackCamera) {
                 PIC_SIZE_WIDTH = 1920;
-                PIC_SIZE_HEIGHT = 1080;
+                PIC_SIZE_HEIGHT = 1088;
             } else {
                 PIC_SIZE_WIDTH = 640;
                 PIC_SIZE_HEIGHT = 480;
@@ -509,8 +513,8 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             Calendar mCalendar = Calendar.getInstance();
             long tamp = mCalendar.getTimeInMillis();// 1393844912
             if (tamp - starttimelamp < 2000) {
-                Thread.sleep(2000);
-                stopRecord();
+                Thread.sleep(3000);
+           //     stopRecord();
             } else {
                 mediaRecorder.stop();
                 isRecording = false;

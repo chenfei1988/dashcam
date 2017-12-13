@@ -345,7 +345,7 @@ public class FileUtil {
             File oldfile = new File(oldPath);
             if (oldfile.exists()) {  //文件存在时
                 InputStream inStream = new FileInputStream(oldPath);  //读入原文件
-                FileOutputStream fs = new FileOutputStream(newPath);
+                FileOutputStream fs = new FileOutputStream(newPath+"danger"+getTime());
                 byte[] buffer = new byte[1444];
 //               int  length;
                 while ((byteread = inStream.read(buffer)) != -1) {

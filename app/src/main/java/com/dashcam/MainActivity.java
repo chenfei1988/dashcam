@@ -96,6 +96,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
 import butterknife.Bind;
 import butterknife.ButterKnife;
 import okhttp3.Call;
@@ -177,6 +178,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     AlarmManager alarmManager;
     private PendingIntent pendingIntent;
     HomeListener mHomeWatcher;
+
     // private Timer recordtimer;
     private class MyHandler extends Handler {
 
@@ -192,7 +194,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 case 10:
                     //   IsStopRecord = false;
                     // start();
-                   // getApplicationInfo().nativeLibraryDir.toString();
+                    // getApplicationInfo().nativeLibraryDir.toString();
                     registerReceiver(mbatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
                     BindReceiver();
                     LogToFileUtils.write("Receiverbind Success");//写入日志
@@ -205,11 +207,11 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         timer3.schedule(clearTFtask, 3000, 1000 * 60 * 3);
                     }
 
-                        if (DateUtils.IsDay()) {
-                            PlayMusic(MainActivity.this, 0);
-                        } else {
-                            PlayMusic(MainActivity.this, 1);
-                        }
+                    if (DateUtils.IsDay()) {
+                        PlayMusic(MainActivity.this, 0);
+                    } else {
+                        PlayMusic(MainActivity.this, 1);
+                    }
 
                     break;
             }
@@ -276,7 +278,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         DeleteDangerVedioFile();
         registerHomeListener();
         LogToFileUtils.write("HomeListen Success");//写入日志
-        myHandler.sendEmptyMessageDelayed(10,4000);
+        myHandler.sendEmptyMessageDelayed(10, 4000);
     }
 
     private void initViews() {
@@ -320,8 +322,8 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 startActivity(intent);
             }
         });
-     //   TextView textView = (TextView) findViewById(R.id.sdkmulu);
-      //  textView.setText(GetFilestring(getApplicationInfo().nativeLibraryDir));
+        //   TextView textView = (TextView) findViewById(R.id.sdkmulu);
+        //  textView.setText(GetFilestring(getApplicationInfo().nativeLibraryDir));
         client = new UDPClient();
         ExecutorService exec = Executors.newCachedThreadPool();
         exec.execute(client);
@@ -2207,7 +2209,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
 
     private void PengzhuangTakePIC() {
         if (!IsPZZP) {
-            IsPZZP =true;
+            IsPZZP = true;
             LogToFileUtils.write("into peng zhuang  zhua pai");//写入日志
             try {
                 cameraSurfaceView.openCamera();
@@ -2226,7 +2228,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 cameraSurfaceView.closeCamera();
                 LogToFileUtils.write("closeCamera");//写入日志
                 LogToFileUtils.write(" pengzhuang  zhupai finished ");//写入日志
-                IsPZZP =false;
+                IsPZZP = false;
             } catch (Exception e) {
                 new Handler(getMainLooper()).postDelayed(new Runnable() {
                     public void run() {
@@ -2241,14 +2243,15 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     }
                 }, 3000);
                 LogToFileUtils.write("pengzhuang zhuapai failed" + e.toString());//写入日志
-                IsPZZP =false;
+                IsPZZP = false;
             }
         }
     }
 
     private void PengZhuangTakeSP() {
-        LogToFileUtils.write("pengzhuang yidong shipin");//写入日志
+
         if (!IsYDSP) {
+            LogToFileUtils.write("pengzhuang yidong shipin");//写入日志
             IsYDSP = true;
             final long currenttime = System.currentTimeMillis();
             try {
@@ -2264,7 +2267,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     public void run() {
                         IsYDSP = false;
                     }
-                }, 3000);
+                }, 10000);
 
             } catch (InterruptedException e) {
                 LogToFileUtils.write("yidong  pengzhuang shipin failed" + e.toString());//写入日志
@@ -2277,7 +2280,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     private void PowerTakePic() {
         LogToFileUtils.write("dian  yuan jian zhua  pai");//写入日志
         if (!IsDYZP) {
-            IsDYZP =true;
+            IsDYZP = true;
             if (IsXiumian) {
                 try {
                     cameraSurfaceView.openCamera();
@@ -2330,9 +2333,9 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             new Handler(getMainLooper()).postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    IsDYZP =false;
+                    IsDYZP = false;
                 }
-            },3000);
+            }, 3000);
 
         }
     }
