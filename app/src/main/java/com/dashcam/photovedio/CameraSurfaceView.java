@@ -254,13 +254,13 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             //  Camera.Size previewSize = CamParaUtil.getSize(mParam.getSupportedPreviewSizes(), 1000,
             if (mOpenBackCamera) {
                 PIC_SIZE_WIDTH = 1920;
-                PIC_SIZE_HEIGHT = 1088;
+                PIC_SIZE_HEIGHT = 1080;
             } else {
                 PIC_SIZE_WIDTH = 640;
                 PIC_SIZE_HEIGHT = 480;
             }
             Camera.Size previewSize = CamParaUtil.getSize(null, 1000,
-                    mCamera.new Size(PIC_SIZE_WIDTH, PIC_SIZE_HEIGHT));
+                    mCamera.new Size(640, 480));
             mParam.setPreviewSize(previewSize.width, previewSize.height);
             int yuv_buffersize = previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewformat) / 8;
             previewBuffer = new byte[yuv_buffersize];
@@ -421,9 +421,10 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                             String photopath = saveBitmap(bitmap);
                             bitmap.recycle();
                             EventBus.getDefault().post(new RefreshEvent(1, photopath, ""));
-                            Thread.sleep(3000);
                             isTakePic = false;
-                        } catch (InterruptedException e) {
+                        } catch (Exception e) {
+                            isTakePic = false;
+                            LogToFileUtils.write("huoqu pic data failed" + e.toString());
                             e.printStackTrace();
                         }
                     }
@@ -508,7 +509,11 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     public void stopRecord() {
         if (!isRecording) return;
-        mediaRecorder.setPreviewDisplay(null);
+        if (mediaRecorder != null) {
+            //设置后不会崩
+            mediaRecorder.setOnErrorListener(null);
+            mediaRecorder.setPreviewDisplay(null);
+        }
         try {
             Calendar mCalendar = Calendar.getInstance();
             long tamp = mCalendar.getTimeInMillis();// 1393844912

@@ -496,10 +496,10 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     GetZhilingType(msg);
                     break;
                 case "ReBootUDP":
-                    client.setUdpLife(false);
-                    client = new UDPClient();
-                    ExecutorService exec = Executors.newCachedThreadPool();
-                    exec.execute(client);
+                  //  client.setUdpLife(false);
+                  //  client = new UDPClient();
+                  //  ExecutorService exec = Executors.newCachedThreadPool();
+                  //  exec.execute(client);
                     break;
                 case "android.intent.GO_SUSPEND":  //进入休眠
                     LogToFileUtils.write("android.intent.GO_SUSPEND");
@@ -613,9 +613,9 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                                     IsDYZP = false;
                                 }
                             }, 10000);*/
-                            // ZhuapaiStatus = 2;//电源键抓拍
-                            // new Thread(runnable_zhuai).start();
-                            PowerTakePic();
+                             ZhuapaiStatus = 2;//电源键抓拍
+                             new Thread(runnable_zhuai).start();
+                          //  PowerTakePic();
                         }
                     }
                     break;
@@ -1106,7 +1106,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     try {
                         if (!IsDestoryed) {
                             cameraSurfaceView.startRecord();//开始录像
-                            myHandler.postDelayed(new Runnable() {
+                            new Handler(getMainLooper()).postDelayed(new Runnable() {
                                 public void run() {
                                     cameraSurfaceView.capture();
                                 }
@@ -1214,7 +1214,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         LogToFileUtils.write("onDestroy:closeCamera");//写入日志
         // mVideoServer.stop();
         //  task.cancel();
-        client.setUdpLife(false);
+       // client.setUdpLife(false);
         Intent intent = new Intent();
         intent.setAction("com.dashcam.intent.STOP_RECORD");
         if (MyAPP.Debug) {
@@ -1858,15 +1858,15 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     private void IntoPengZhuang() {
         if (IsXiumian) {
             if (!IsDestoryed) {
-                PengzhuangTakePIC();
-                // ZhuapaiStatus = 3;//碰撞抓拍
-                // new Thread(runnable_zhuai).start();
+                //PengzhuangTakePIC();
+                 ZhuapaiStatus = 3;//碰撞抓拍
+                 new Thread(runnable_zhuai).start();
             }
         } else {
             if (!IsDestoryed && cameraSurfaceView.isRecording) {
-                PengZhuangTakeSP();
-                // ZhuapaiStatus = 9;//碰撞移动视频
-                // new Thread(runnable_zhuai).start();
+               // PengZhuangTakeSP();
+              //   ZhuapaiStatus = 9;//碰撞移动视频
+               //  new Thread(runnable_zhuai).start();
             }
         }
     }
@@ -2123,6 +2123,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
 
                         } else {
                             cameraSurfaceView.stopRecord();
+
                         }
                         IsZhualu = true;
                         CameraSurfaceView.Recordtime = 1000 * 6;
@@ -2130,6 +2131,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         CameraSurfaceView.mencode = MediaRecorder.VideoEncoder.H264;
                         if (!isbackcamera) {
                             try {
+                                Thread.sleep(1000);
                                 cameraSurfaceView.setDefaultCamera(false);
                                 Thread.sleep(1000);
                                 IsBackCamera = false;

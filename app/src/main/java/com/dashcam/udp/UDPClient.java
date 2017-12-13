@@ -12,6 +12,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URLDecoder;
 import java.net.UnknownHostException;
 
@@ -128,14 +129,23 @@ public class UDPClient implements Runnable {
                     MainActivity.context.sendBroadcast(intent);
                 }
                 ISTimeout =true;
-                //  }
-            /*    Intent RcvIntent = new Intent();
-                RcvIntent.setAction("ReBootUDP");
-                RcvIntent.putExtra("ReBootUDP", "111");
-                MainActivity.context.sendBroadcast(RcvIntent);
-                udpLife=false;*/
                 e.printStackTrace();
             }
+           /* catch (Exception e) {
+                try {
+                    socket = new DatagramSocket();
+                    socket.setSoTimeout(120000);
+                } catch (SocketException e1) {
+                    LogToFileUtils.write("udpClient,建立接收数据报失败" + e.toString());//写入日志
+                    Log.i("udpClient", "建立接收数据报失败");
+                    e.printStackTrace();
+                }
+                packetRcv = new DatagramPacket(msgRcv, msgRcv.length);
+                Log.i("Udp",   e.toString());
+                LogToFileUtils.write("udpClient"+ e.toString());//写入日志
+                //  FileSUtil.wakeUpAndUnlock(MainActivity.context);
+
+            }*/
         }
 
         Log.i("udpClient", "UDP监听关闭");
