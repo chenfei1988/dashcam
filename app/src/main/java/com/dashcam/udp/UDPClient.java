@@ -6,6 +6,7 @@ import android.util.Log;
 import com.dashcam.MainActivity;
 import com.dashcam.base.LogToFileUtils;
 import com.dashcam.base.MyAPP;
+
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
@@ -106,7 +107,7 @@ public class UDPClient implements Runnable {
                 RcvIntent.setAction("udpRcvMsg");
                 RcvIntent.putExtra("udpRcvMsg", RcvMsg);
                 MainActivity.context.sendBroadcast(RcvIntent);
-                if (ISTimeout) {
+                if (ISTimeout && MainActivity.IsXiumian) {
                     Intent intent = new Intent();
                     intent.setAction("com.dashcam.intent.REQUEST_GO_SLEEP");
                     LogToFileUtils.write("com.dashcam.intent.REQUEST_GO_SLEEP guangbo send");//写入日志
@@ -120,15 +121,18 @@ public class UDPClient implements Runnable {
                 Log.i("Rcv", RcvMsg);
             } catch (Exception e) {
                 Log.i("Udp", "接收超时" + e.toString());
-                LogToFileUtils.write("udpClient, 接收超时"+ e.toString());//写入日志
+                LogToFileUtils.write("udpClient, 接收超时" + e.toString());//写入日志
                 //  FileSUtil.wakeUpAndUnlock(MainActivity.context);
-                Intent intent = new Intent();
-                intent.setAction("com.dashcam.intent.REQUEST_WAKE_UP");
-                LogToFileUtils.write("com.dashcam.intent.REQUEST_WAKE_UP guangbo send");//写入日志
-                if (MyAPP.Debug) {
-                    MainActivity.context.sendBroadcast(intent);
+                if (MainActivity.IsXiumian) {
+                    Intent intent = new Intent();
+                    intent.setAction("com.dashcam.intent.REQUEST_WAKE_UP");
+                    LogToFileUtils.write("com.dashcam.intent.REQUEST_WAKE_UP guangbo send");//写入日志
+
+                    if (MyAPP.Debug) {
+                        MainActivity.context.sendBroadcast(intent);
+                    }
+                    ISTimeout = true;
                 }
-                ISTimeout =true;
                 e.printStackTrace();
             }
            /* catch (Exception e) {

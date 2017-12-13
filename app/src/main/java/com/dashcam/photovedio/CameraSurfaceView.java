@@ -190,12 +190,13 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 closeCamera();
                 LogToFileUtils.write("closeCamera:" + "");
                 Log.e("closeCamera:", "");
-                Thread.sleep(1000);
+                Thread.sleep(1500);
                 openCamera();
                 LogToFileUtils.write("openCamera:" + "");
                 Log.e("openCamera:", "");
-                Thread.sleep(1000);
+                Thread.sleep(1500);
                 startPreview();
+                Thread.sleep(1000);
                 LogToFileUtils.write("startPreview:" + "");
                 Log.e("startPreview:", "");
             } catch (Exception e) {
@@ -405,7 +406,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
     public void onAutoFocus(Camera camera) {
         if (!isTakePic) {
             try {
-                isTakePic =true;
+                isTakePic = true;
                 mCamera.takePicture(new Camera.ShutterCallback() {
                     @Override
                     public void onShutter() {
@@ -497,6 +498,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 context.sendBroadcast(intent);
             }
         } catch (Exception e) {
+            isRecording = false;
             LogToFileUtils.write("startrecording failed" + e.toString());
             e.printStackTrace();
             return false;
@@ -509,41 +511,42 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
 
     public void stopRecord() {
         if (!isRecording) return;
-        if (mediaRecorder != null) {
-            //设置后不会崩
-            mediaRecorder.setOnErrorListener(null);
-            mediaRecorder.setPreviewDisplay(null);
-        }
-        try {
-            Calendar mCalendar = Calendar.getInstance();
-            long tamp = mCalendar.getTimeInMillis();// 1393844912
-            if (tamp - starttimelamp < 2000) {
+        Calendar mCalendar = Calendar.getInstance();
+        long tamp = mCalendar.getTimeInMillis();// 1393844912
+        if (tamp - starttimelamp < 3000) {
+            try {
                 Thread.sleep(3000);
-           //     stopRecord();
-            } else {
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }//     stopRecord();
+        } else {
+            try {
+                if (mediaRecorder != null) {
+                    //设置后不会崩
+                    mediaRecorder.setOnErrorListener(null);
+                    mediaRecorder.setPreviewDisplay(null);
+                }
                 mediaRecorder.stop();
                 isRecording = false;
                 LogToFileUtils.write("video have saved in rootmulu");
                 //   Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
                 if (MainActivity.IsZhualu) {
                     EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
-                }
-                else  if(MainActivity.IsYDSP){
-                    FileUtil.MoveFiletoDangerFile(currentVediopah,rootPath);
-                }
-                else {
+                } else if (MainActivity.IsYDSP) {
+                    FileUtil.MoveFiletoDangerFile(currentVediopah, rootPath);
+                } else {
                     Intent intent = new Intent();
                     intent.setAction("com.dashcam.intent.STOP_RECORD");
                     if (MyAPP.Debug) {
                         context.sendBroadcast(intent);
                     }
                 }
+                LogToFileUtils.write("stopRecord Success");
+                //  videoDb.addDriveVideo(driveVideo);
+            } catch (Exception e) {
+                LogToFileUtils.write("stopRecord failed" + e.toString());//写入日志
+                e.printStackTrace();
             }
-            LogToFileUtils.write("stopRecord Success");
-            //  videoDb.addDriveVideo(driveVideo);
-        } catch (Exception e) {
-            LogToFileUtils.write("stopRecord failed" + e.toString());//写入日志
-            e.printStackTrace();
         }
     }
 

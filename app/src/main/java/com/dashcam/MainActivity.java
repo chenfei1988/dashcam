@@ -431,6 +431,11 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 CameraSurfaceView.Recordtime = 60 * 1000 * 3;
                 CameraSurfaceView.VIDEO_SIZE = new int[]{1280, 720};
                 CameraSurfaceView.mencode = MediaRecorder.VideoEncoder.MPEG_4_SP;
+                try {
+                    Thread.sleep(1500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 cameraSurfaceView.startRecord();
             }
         }
@@ -631,7 +636,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         }
                     }).start();
                     break;
-                case "com.dashcam.intent.WAKE_UP":
+             /*    case "com.dashcam.intent.WAKE_UP":
                     if (IsXiumian) {
                         String sendtext = "*" + IMEI + ",1,"
                                 + GPSSTR + "#";
@@ -643,7 +648,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     }
                     break;
                 case "WAKE_UP":
-                    if (IsXiumian) {
+                   if (IsXiumian) {
                         String sendtext = "*" + IMEI + ",1,"
                                 + GPSSTR + "#";
                         LogToFileUtils.write("xiumian xintiaobao " + sendtext);//写入日志
@@ -653,7 +658,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         }
                     }
                     alarmManager.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + 120000, pendingIntent);
-                    break;
+                    break;*/
                 default:
                     break;
             }
@@ -677,7 +682,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         // (0 前置摄像头,1 后置摄像头)
                         long currenttime = Calendar.getInstance().getTimeInMillis();
                         LogToFileUtils.write(currenttime - lasttakepictime + "");
-                        if (currenttime - lasttakepictime > 10000) {
+                        if (currenttime - lasttakepictime > 15000) {
                             lasttakepictime = currenttime;
                             if (lushu.equals("0")) {
                                 ZhuapaiStatus = 1;
@@ -960,7 +965,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     break;
                 case "80"://新增视频抓拍协议
                     long currenttime = Calendar.getInstance().getTimeInMillis();
-                    if (currenttime - lastvideorecordtime > 15000) {
+                    if (currenttime - lastvideorecordtime > 20000) {
                         lastvideorecordtime = currenttime;
                         if (types.length == 3) {
                             String lushu = types[2];
@@ -2259,7 +2264,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             try {
                 cameraSurfaceView.stopRecord();
                 LogToFileUtils.write("stopRecord");//写入日志
-                Thread.sleep(1000);
+                Thread.sleep(2000);
                 cameraSurfaceView.startRecord();
                 LogToFileUtils.write("startRecord");//写入日志
                 // FileUtil.MoveFiletoDangerFile(currenttime, rootPath);
