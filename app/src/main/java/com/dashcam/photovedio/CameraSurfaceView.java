@@ -270,7 +270,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 PIC_SIZE_HEIGHT = 480;
             }
             Camera.Size previewSize = CamParaUtil.getSize(null, 1000,
-                    mCamera.new Size(PIC_SIZE_WIDTH>1280?1280:PIC_SIZE_WIDTH, PIC_SIZE_HEIGHT>720?720:PIC_SIZE_HEIGHT));
+                    mCamera.new Size(PIC_SIZE_WIDTH > 1280 ? 1280 : PIC_SIZE_WIDTH, PIC_SIZE_HEIGHT > 720 ? 720 : PIC_SIZE_HEIGHT));
             mParam.setPreviewSize(previewSize.width, previewSize.height);
             int yuv_buffersize = previewSize.width * previewSize.height * ImageFormat.getBitsPerPixel(previewformat) / 8;
             previewBuffer = new byte[yuv_buffersize];
@@ -537,14 +537,16 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             mediaRecorder.stop();
             isRecording = false;
             LogToFileUtils.write("video have saved in rootmulu");
-            new android.os.Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
-                }
-            },1000);
+            if (MainActivity.IsZhualu) {
+                new android.os.Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
+                    }
+                }, 1000);
+            }
             //   Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
-             if (MainActivity.IsYDSP) {
+            if (MainActivity.IsYDSP) {
                 FileUtil.MoveFiletoDangerFile(currentVediopah, rootPath);
             } else {
                 Intent intent = new Intent();

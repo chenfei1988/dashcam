@@ -169,13 +169,14 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     private long lasttakepicinsidetime = 0;//上次接受到抓录命令的时间
     private long lasttakevediooutsidetime = 0;//上次接受到抓拍抓录命令的时间
     private long lasttakepicoutsidetime = 0;//上次接受到抓录命令的时间
+    private long firstopentime = 0;//APP开启时间
     private boolean IsGpsPlay = true;//是否播放GPS信号弱
     private boolean IsDYQH = false;//是否电源切换
     private boolean IsPZQJ = false;//是否碰撞期间
     private boolean IsDYZP = false;//是否电源抓拍
     private boolean IsCSDY = false;//是否插上电源期间
     public static boolean IsYDSP = false;//是否移动视频期间
-    public static boolean IsPZZP = true;//是否碰撞抓拍期间
+    public static boolean IsPZZP = false;//是否碰撞抓拍期间
     private boolean IsQXDY = false;//是否取消电源期间
     AlarmManager alarmManager;
     private PendingIntent pendingIntent;
@@ -235,6 +236,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     }
 
     private void initData() {
+        firstopentime = System.currentTimeMillis();
         //  CheckPermissionsUtil checkPermissionsUtil = new CheckPermissionsUtil(this);
         //  checkPermissionsUtil.requestAllPermission(this);
         // liuliang.setText(0 + "");//C类问题先不管
@@ -600,17 +602,21 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     break;
                 case "android.intent.KEYCODE_F11":
                     LogToFileUtils.write("android.intent.KEYCODE_F11");
-                    if (!IsDYQH) {
-                        IntoPengZhuang();
+                    long currenttime = System.currentTimeMillis();
+                    if (currenttime - firstopentime > 30000) {
+                        if (!IsDYQH) {
+                            IntoPengZhuang();
+                        }
                     }
                     break;
                 case "android.intent.POWER_KEY_SHUTTER":
 
-                    if (!IsDYQH&&!IsPZZP) {  //电源切换
+                    if (!IsDYQH && !IsPZZP) {  //电源切换
                         if (!IsDYZP) { //电源抓拍
                             LogToFileUtils.write("android.intent.POWER_KEY_SHUTTER");
                             ZhuapaiStatus = 2;//电源键抓拍
-                            new Thread(runnable_zhuai).start();;
+                            new Thread(runnable_zhuai).start();
+                            ;
                         }
                     }
                     break;
@@ -672,20 +678,20 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         // (0 前置摄像头,1 后置摄像头)
                         long currenttime = System.currentTimeMillis();
                         if (lushu.equals("0")) {
-                            if (currenttime - lasttakevedioinsidetime > (IsXiumian?18000:16000)
-                                    && currenttime - lasttakepicinsidetime > (IsXiumian?16000:14000)
-                                    && currenttime - lasttakevediooutsidetime > (IsXiumian?16000:14000)
-                                    && currenttime - lasttakepicoutsidetime > (IsXiumian?8000:5000)&&!IsPZQJ) {
+                            if (currenttime - lasttakevedioinsidetime > (IsXiumian ? 18000 : 16000)
+                                    && currenttime - lasttakepicinsidetime > (IsXiumian ? 16000 : 14000)
+                                    && currenttime - lasttakevediooutsidetime > (IsXiumian ? 16000 : 14000)
+                                    && currenttime - lasttakepicoutsidetime > (IsXiumian ? 8000 : 5000) && !IsPZQJ) {
                                 lasttakepicoutsidetime = currenttime;
                                 ZhuapaiStatus = 1;
                                 IsBackCamera = true;
                                 new Thread(runnable_zhuai).start();
                             }
                         } else if (lushu.equals("1")) {
-                            if (currenttime - lasttakevedioinsidetime > (IsXiumian?18000:16000)
-                                    && currenttime - lasttakepicinsidetime > (IsXiumian?16000:14000)
-                                    && currenttime - lasttakevediooutsidetime > (IsXiumian?16000:14000)
-                                    && currenttime - lasttakepicoutsidetime > (IsXiumian?8000:5000)&&!IsPZQJ) {
+                            if (currenttime - lasttakevedioinsidetime > (IsXiumian ? 18000 : 16000)
+                                    && currenttime - lasttakepicinsidetime > (IsXiumian ? 16000 : 14000)
+                                    && currenttime - lasttakevediooutsidetime > (IsXiumian ? 16000 : 14000)
+                                    && currenttime - lasttakepicoutsidetime > (IsXiumian ? 8000 : 5000) && !IsPZQJ) {
                                 lasttakepicinsidetime = currenttime;
                                 ZhuapaiStatus = 1;
                                 IsBackCamera = false;
@@ -967,20 +973,20 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         String lushu = types[2];
                         // (1前置摄像头,0后置摄像头)
                         if (lushu.equals("0")) {
-                            if (currenttime - lasttakevedioinsidetime > (IsXiumian?18000:16000)
-                                    && currenttime - lasttakepicinsidetime > (IsXiumian?16000:14000)
-                                    && currenttime - lasttakevediooutsidetime > (IsXiumian?16000:14000)
-                                    && currenttime - lasttakepicoutsidetime > (IsXiumian?8000:5000)&&!IsPZQJ) {
+                            if (currenttime - lasttakevedioinsidetime > (IsXiumian ? 18000 : 16000)
+                                    && currenttime - lasttakepicinsidetime > (IsXiumian ? 16000 : 14000)
+                                    && currenttime - lasttakevediooutsidetime > (IsXiumian ? 16000 : 14000)
+                                    && currenttime - lasttakepicoutsidetime > (IsXiumian ? 8000 : 5000) && !IsPZQJ) {
                                 lasttakevediooutsidetime = currenttime;
                                 IsBackCamera = true;
                                 ZhuapaiStatus = 6;
                                 new Thread(runnable_zhuai).start();
                             }
                         } else {
-                            if (currenttime - lasttakevedioinsidetime > (IsXiumian?18000:16000)
-                                    && currenttime - lasttakepicinsidetime > (IsXiumian?16000:14000)
-                                    && currenttime - lasttakevediooutsidetime > (IsXiumian?16000:14000)
-                                    && currenttime - lasttakepicoutsidetime > (IsXiumian?8000:5000)&&!IsPZQJ) {
+                            if (currenttime - lasttakevedioinsidetime > (IsXiumian ? 18000 : 16000)
+                                    && currenttime - lasttakepicinsidetime > (IsXiumian ? 16000 : 14000)
+                                    && currenttime - lasttakevediooutsidetime > (IsXiumian ? 16000 : 14000)
+                                    && currenttime - lasttakepicoutsidetime > (IsXiumian ? 8000 : 5000) && !IsPZQJ) {
                                 lasttakevedioinsidetime = currenttime;
                                 IsBackCamera = false;
                                 ZhuapaiStatus = 6;
@@ -1124,7 +1130,6 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                             new Handler(getMainLooper()).postDelayed(new Runnable() {
                                 public void run() {
                                     cameraSurfaceView.capture();
-                                    IsPZZP=false;
                                 }
                             }, 4000);
                         }
@@ -1875,11 +1880,11 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         if (IsXiumian) {
             if (!IsDestoryed) {
                 //PengzhuangTakePIC();
-            long   currenttime = System.currentTimeMillis();
-                if (currenttime - lasttakevedioinsidetime > (IsXiumian?18000:16000)
-                        && currenttime - lasttakepicinsidetime > (IsXiumian?16000:14000)
-                        && currenttime - lasttakevediooutsidetime > (IsXiumian?16000:14000)
-                        && currenttime - lasttakepicoutsidetime > (IsXiumian?8000:5000)) {
+                long currenttime = System.currentTimeMillis();
+                if (currenttime - lasttakevedioinsidetime > (IsXiumian ? 18000 : 16000)
+                        && currenttime - lasttakepicinsidetime > (IsXiumian ? 16000 : 14000)
+                        && currenttime - lasttakevediooutsidetime > (IsXiumian ? 16000 : 14000)
+                        && currenttime - lasttakepicoutsidetime > (IsXiumian ? 8000 : 5000)) {
                     lasttakepicoutsidetime = currenttime;
                     ZhuapaiStatus = 3;//碰撞抓拍
                     new Thread(runnable_zhuai).start();
