@@ -127,8 +127,10 @@ public class FileUtil {
             public void onSignalStrengthsChanged(SignalStrength signalStrength) {
                 super.onSignalStrengthsChanged(signalStrength);
                 String signalInfo = signalStrength.toString();
-                String[] params = signalInfo.split(" ");
-                if (tm.getNetworkType() == TelephonyManager.NETWORK_TYPE_LTE) {
+                int level =signalStrength.getLevel();
+                EventBus.getDefault().post(new RefreshEvent(3, "" + level, ""));
+             //   String[] params = signalInfo.split(" ");
+             /*   if (tm.getNetworkType() == TelephonyManager.NETWORK_TYPE_LTE) {
                     //4G网络 最佳范围   >-90dBm 越大越好
                     int Itedbm = Integer.parseInt(params[9]);
                     Toast.makeText(context, Itedbm + "", Toast.LENGTH_LONG);
@@ -169,7 +171,7 @@ public class FileUtil {
                     //   EventBus.getDefault().post(new RefreshEvent(3,""+dbm,""));
                     //Toast.makeText(context,dbm+"",Toast.LENGTH_LONG);
                     // setDBM(dbm+"");
-                }
+                }*/
 
             }
         };

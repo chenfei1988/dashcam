@@ -10,6 +10,7 @@ import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.media.AudioManager;
 import android.media.MediaRecorder;
+import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.SurfaceHolder;
@@ -538,7 +539,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             isRecording = false;
             LogToFileUtils.write("video have saved in rootmulu");
             if (MainActivity.IsZhualu) {
-                new android.os.Handler().postDelayed(new Runnable() {
+                new android.os.Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
