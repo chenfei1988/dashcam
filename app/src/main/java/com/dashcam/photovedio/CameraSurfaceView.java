@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.logging.Handler;
 
 import static android.hardware.Camera.Parameters.FLASH_MODE_OFF;
 
@@ -485,8 +486,19 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 switch (what) {
                     case MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED:
                         stopRecord();
-                        if (mOpenBackCamera && !MainActivity.IsZhualu) {
-                            startRecord();
+                        if (mOpenBackCamera) {
+                            if (MainActivity.IsZhualu){
+                                EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
+                            }
+                            else{
+                                startRecord();
+                                LogToFileUtils.write("mOpenBackCamera !MainActivity.IsZhualu" );
+                            }
+                        }
+                        else{
+                            if (MainActivity.IsZhualu){
+                                EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
+                            }
                         }
                         break;
                     default:
@@ -537,9 +549,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             isRecording = false;
             LogToFileUtils.write("video have saved in rootmulu");
             //   Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
-            if (MainActivity.IsZhualu) {
-                EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
-            } else if (MainActivity.IsYDSP) {
+             if (MainActivity.IsYDSP) {
                 FileUtil.MoveFiletoDangerFile(currentVediopah, rootPath);
             } else {
                 Intent intent = new Intent();

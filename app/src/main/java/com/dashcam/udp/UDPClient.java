@@ -87,7 +87,7 @@ public class UDPClient implements Runnable {
 
         try {
             socket = new DatagramSocket();
-            socket.setSoTimeout(120000);
+            socket.setSoTimeout(150000);
         } catch (SocketException e) {
             LogToFileUtils.write("udpClient,建立接收数据报失败" + e.toString());//写入日志
             Log.i("udpClient", "建立接收数据报失败");

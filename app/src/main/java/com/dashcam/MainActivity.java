@@ -200,7 +200,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     LogToFileUtils.write("Receiverbind Success");//写入日志
                     if (timer1 == null) {
                         timer1 = new Timer();
-                        timer1.schedule(task, 60000, 15000);
+                        timer1.schedule(task, 60000, 75000);
                     }
                     if (timer3 == null) {
                         timer3 = new Timer();
@@ -402,8 +402,9 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             IsZhualu = false;
             //  cameraSurfaceView.stopRecord();
             if (!IsBackCamera) {
-                cameraSurfaceView.setDefaultCamera(true);
                 try {
+                    Thread.sleep(1000);
+                    cameraSurfaceView.setDefaultCamera(true);
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -419,13 +420,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
 
             if (IsXiumian) {
                 cameraSurfaceView.closeCamera();
-                LogToFileUtils.write("closeCamera");//写入日志
-                //   IntoXiumian();
-                //      Intent intent = new Intent();
-                //      intent.setAction("com.dashcam.intent.TAKE_CAPTURE");
-                //      if (MyAPP.Debug) {
-                //          sendBroadcast(intent);
-                //      }
+                LogToFileUtils.write("zhuan lu is xiumian closeCamera");//写入日志
             } else {
                 //   IsStopRecord = false;
                 CameraSurfaceView.Recordtime = 60 * 1000 * 3;
@@ -436,6 +431,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+                LogToFileUtils.write("zhuan lu is  startRecord");//写入日志
                 cameraSurfaceView.startRecord();
             }
         }
