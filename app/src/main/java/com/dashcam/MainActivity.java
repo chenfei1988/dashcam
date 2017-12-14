@@ -165,15 +165,17 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     PowerManager powerManager = null;
     // PowerManager.WakeLock wakeLock = null;
     private boolean IsDestoryed = false;
-    private long lasttakepicvediotime = 0;//上次接受到抓拍抓录命令的时间
-    //private long lasttakepictime = 0;//上次接受到抓录命令的时间
+    private long lasttakevedioinsidetime = 0;//上次接受到抓拍抓录命令的时间
+    private long lasttakepicinsidetime = 0;//上次接受到抓录命令的时间
+    private long lasttakevediooutsidetime = 0;//上次接受到抓拍抓录命令的时间
+    private long lasttakepicoutsidetime = 0;//上次接受到抓录命令的时间
     private boolean IsGpsPlay = true;//是否播放GPS信号弱
     private boolean IsDYQH = false;//是否电源切换
     private boolean IsPZQJ = false;//是否碰撞期间
     private boolean IsDYZP = false;//是否电源抓拍
     private boolean IsCSDY = false;//是否插上电源期间
     public static boolean IsYDSP = false;//是否移动视频期间
-    public static boolean IsPZZP = false;//是否碰撞抓拍期间
+    public static boolean IsPZZP = true;//是否碰撞抓拍期间
     private boolean IsQXDY = false;//是否取消电源期间
     AlarmManager alarmManager;
     private PendingIntent pendingIntent;
@@ -497,10 +499,10 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     GetZhilingType(msg);
                     break;
                 case "ReBootUDP":
-                  //  client.setUdpLife(false);
-                  //  client = new UDPClient();
-                  //  ExecutorService exec = Executors.newCachedThreadPool();
-                  //  exec.execute(client);
+                    //  client.setUdpLife(false);
+                    //  client = new UDPClient();
+                    //  ExecutorService exec = Executors.newCachedThreadPool();
+                    //  exec.execute(client);
                     break;
                 case "android.intent.GO_SUSPEND":  //进入休眠
                     LogToFileUtils.write("android.intent.GO_SUSPEND");
@@ -604,19 +606,11 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     break;
                 case "android.intent.POWER_KEY_SHUTTER":
 
-                    if (!IsDYQH) {  //电源切换
+                    if (!IsDYQH&&!IsPZZP) {  //电源切换
                         if (!IsDYZP) { //电源抓拍
                             LogToFileUtils.write("android.intent.POWER_KEY_SHUTTER");
-                          /*  IsDYZP = true;
-                            new Handler(getMainLooper()).postDelayed(new Runnable() {
-                                @Override
-                                public void run() {
-                                    IsDYZP = false;
-                                }
-                            }, 10000);*/
-                             ZhuapaiStatus = 2;//电源键抓拍
-                             new Thread(runnable_zhuai).start();
-                          //  PowerTakePic();
+                            ZhuapaiStatus = 2;//电源键抓拍
+                            new Thread(runnable_zhuai).start();;
                         }
                     }
                     break;
@@ -677,14 +671,22 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         String lushu = types[2];
                         // (0 前置摄像头,1 后置摄像头)
                         long currenttime = System.currentTimeMillis();
-                        LogToFileUtils.write(currenttime - lasttakepicvediotime + "");
-                        if (currenttime - lasttakepicvediotime > 20000) {
-                            lasttakepicvediotime = currenttime;
-                            if (lushu.equals("0")) {
+                        if (lushu.equals("0")) {
+                            if (currenttime - lasttakevedioinsidetime > (IsXiumian?18000:16000)
+                                    && currenttime - lasttakepicinsidetime > (IsXiumian?16000:14000)
+                                    && currenttime - lasttakevediooutsidetime > (IsXiumian?16000:14000)
+                                    && currenttime - lasttakepicoutsidetime > (IsXiumian?8000:5000)&&!IsPZQJ) {
+                                lasttakepicoutsidetime = currenttime;
                                 ZhuapaiStatus = 1;
                                 IsBackCamera = true;
                                 new Thread(runnable_zhuai).start();
-                            } else if (lushu.equals("1")) {
+                            }
+                        } else if (lushu.equals("1")) {
+                            if (currenttime - lasttakevedioinsidetime > (IsXiumian?18000:16000)
+                                    && currenttime - lasttakepicinsidetime > (IsXiumian?16000:14000)
+                                    && currenttime - lasttakevediooutsidetime > (IsXiumian?16000:14000)
+                                    && currenttime - lasttakepicoutsidetime > (IsXiumian?8000:5000)&&!IsPZQJ) {
+                                lasttakepicinsidetime = currenttime;
                                 ZhuapaiStatus = 1;
                                 IsBackCamera = false;
                                 new Thread(runnable_zhuai).start();
@@ -961,18 +963,30 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     break;
                 case "80"://新增视频抓拍协议
                     long currenttime = System.currentTimeMillis();
-                    if (currenttime - lasttakepicvediotime >20000) {
-                        lasttakepicvediotime = currenttime;
-                        if (types.length == 3) {
-                            String lushu = types[2];
-                            // (1前置摄像头,0后置摄像头)
-                            if (lushu.equals("0")) {
+                    if (types.length == 3) {
+                        String lushu = types[2];
+                        // (1前置摄像头,0后置摄像头)
+                        if (lushu.equals("0")) {
+                            if (currenttime - lasttakevedioinsidetime > (IsXiumian?18000:16000)
+                                    && currenttime - lasttakepicinsidetime > (IsXiumian?16000:14000)
+                                    && currenttime - lasttakevediooutsidetime > (IsXiumian?16000:14000)
+                                    && currenttime - lasttakepicoutsidetime > (IsXiumian?8000:5000)&&!IsPZQJ) {
+                                lasttakevediooutsidetime = currenttime;
                                 IsBackCamera = true;
-                            } else {
-                                IsBackCamera = false;
+                                ZhuapaiStatus = 6;
+                                new Thread(runnable_zhuai).start();
                             }
-                            ZhuapaiStatus = 6;
-                            new Thread(runnable_zhuai).start();
+                        } else {
+                            if (currenttime - lasttakevedioinsidetime > (IsXiumian?18000:16000)
+                                    && currenttime - lasttakepicinsidetime > (IsXiumian?16000:14000)
+                                    && currenttime - lasttakevediooutsidetime > (IsXiumian?16000:14000)
+                                    && currenttime - lasttakepicoutsidetime > (IsXiumian?8000:5000)&&!IsPZQJ) {
+                                lasttakevedioinsidetime = currenttime;
+                                IsBackCamera = false;
+                                ZhuapaiStatus = 6;
+                                new Thread(runnable_zhuai).start();
+                            }
+
                         }
                     }
 
@@ -1110,6 +1124,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                             new Handler(getMainLooper()).postDelayed(new Runnable() {
                                 public void run() {
                                     cameraSurfaceView.capture();
+                                    IsPZZP=false;
                                 }
                             }, 4000);
                         }
@@ -1215,7 +1230,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         LogToFileUtils.write("onDestroy:closeCamera");//写入日志
         // mVideoServer.stop();
         //  task.cancel();
-       // client.setUdpLife(false);
+        // client.setUdpLife(false);
         Intent intent = new Intent();
         intent.setAction("com.dashcam.intent.STOP_RECORD");
         if (MyAPP.Debug) {
@@ -1860,14 +1875,21 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         if (IsXiumian) {
             if (!IsDestoryed) {
                 //PengzhuangTakePIC();
-                 ZhuapaiStatus = 3;//碰撞抓拍
-                 new Thread(runnable_zhuai).start();
+            long   currenttime = System.currentTimeMillis();
+                if (currenttime - lasttakevedioinsidetime > (IsXiumian?18000:16000)
+                        && currenttime - lasttakepicinsidetime > (IsXiumian?16000:14000)
+                        && currenttime - lasttakevediooutsidetime > (IsXiumian?16000:14000)
+                        && currenttime - lasttakepicoutsidetime > (IsXiumian?8000:5000)) {
+                    lasttakepicoutsidetime = currenttime;
+                    ZhuapaiStatus = 3;//碰撞抓拍
+                    new Thread(runnable_zhuai).start();
+                }
             }
         } else {
             if (!IsDestoryed && cameraSurfaceView.isRecording) {
-               // PengZhuangTakeSP();
-              //   ZhuapaiStatus = 9;//碰撞移动视频
-               //  new Thread(runnable_zhuai).start();
+                // PengZhuangTakeSP();
+                //   ZhuapaiStatus = 9;//碰撞移动视频
+                //  new Thread(runnable_zhuai).start();
             }
         }
     }
@@ -2227,7 +2249,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             cameraSurfaceView.setDefaultCamera(false);
             Thread.sleep(100);
             cameraSurfaceView.capture();*/
-                Thread.sleep(1500);
+                Thread.sleep(4500);
                 cameraSurfaceView.closeCamera();
                 LogToFileUtils.write("closeCamera");//写入日志
                 LogToFileUtils.write(" pengzhuang  zhupai finished ");//写入日志

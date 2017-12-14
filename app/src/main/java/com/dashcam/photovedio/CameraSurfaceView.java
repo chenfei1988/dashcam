@@ -203,7 +203,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 openCamera();
                 LogToFileUtils.write("openCamera:" + "");
                 Log.e("openCamera:", "");
-                Thread.sleep(1500);
+                Thread.sleep(2000);
                 startPreview();
                 Thread.sleep(1000);
                 LogToFileUtils.write("startPreview:" + "");
@@ -486,19 +486,8 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 switch (what) {
                     case MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED:
                         stopRecord();
-                        if (mOpenBackCamera) {
-                            if (MainActivity.IsZhualu){
-                                EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
-                            }
-                            else{
-                                startRecord();
-                                LogToFileUtils.write("mOpenBackCamera !MainActivity.IsZhualu" );
-                            }
-                        }
-                        else{
-                            if (MainActivity.IsZhualu){
-                                EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
-                            }
+                        if (mOpenBackCamera && !MainActivity.IsZhualu) {
+                            startRecord();
                         }
                         break;
                     default:
@@ -548,6 +537,12 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             mediaRecorder.stop();
             isRecording = false;
             LogToFileUtils.write("video have saved in rootmulu");
+            new android.os.Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
+                }
+            },1000);
             //   Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
              if (MainActivity.IsYDSP) {
                 FileUtil.MoveFiletoDangerFile(currentVediopah, rootPath);
