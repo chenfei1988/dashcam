@@ -602,7 +602,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                     break;
                 case "android.intent.KEYCODE_F11":
                     LogToFileUtils.write("android.intent.KEYCODE_F11");
-                    long currenttime = System.currentTimeMillis();
+                   long currenttime = System.currentTimeMillis();
                     if (currenttime - firstopentime > 30000) {
                         if (!IsDYQH) {
                             IntoPengZhuang();
@@ -808,7 +808,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                         } else {
                             PlayMusic(MainActivity.this, 1);
                         }
-                        new Handler().postDelayed(new Runnable() {
+                        new Handler(getMainLooper()).postDelayed(new Runnable() {
                             public void run() {
                                 //execute the task
                                 final String opentext = "*" + IMEI + ",11," +
@@ -1877,14 +1877,14 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
     }
 
     private void IntoPengZhuang() {
+        long currenttime = System.currentTimeMillis();
         if (IsXiumian) {
             if (!IsDestoryed) {
                 //PengzhuangTakePIC();
-                long currenttime = System.currentTimeMillis();
                 if (currenttime - lasttakevedioinsidetime > (IsXiumian ? 18000 : 16000)
                         && currenttime - lasttakepicinsidetime > (IsXiumian ? 16000 : 14000)
                         && currenttime - lasttakevediooutsidetime > (IsXiumian ? 16000 : 14000)
-                        && currenttime - lasttakepicoutsidetime > (IsXiumian ? 8000 : 5000)) {
+                        && currenttime - lasttakepicoutsidetime > (IsXiumian ? 8000 : 5000)&&!IsDYZP&&!IsPZZP) {
                     lasttakepicoutsidetime = currenttime;
                     ZhuapaiStatus = 3;//碰撞抓拍
                     new Thread(runnable_zhuai).start();
@@ -1893,8 +1893,10 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         } else {
             if (!IsDestoryed && cameraSurfaceView.isRecording) {
                 // PengZhuangTakeSP();
-                //   ZhuapaiStatus = 9;//碰撞移动视频
-                //  new Thread(runnable_zhuai).start();
+                if (!IsZhualu&&!IsPZQJ) {
+                    ZhuapaiStatus = 9;//碰撞移动视频
+                    new Thread(runnable_zhuai).start();
+                }
             }
         }
     }
@@ -2283,7 +2285,6 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
         if (!IsYDSP) {
             LogToFileUtils.write("pengzhuang yidong shipin");//写入日志
             IsYDSP = true;
-            final long currenttime = System.currentTimeMillis();
             try {
                 cameraSurfaceView.stopRecord();
                 LogToFileUtils.write("stopRecord");//写入日志
@@ -2292,7 +2293,7 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
                 LogToFileUtils.write("startRecord");//写入日志
                 // FileUtil.MoveFiletoDangerFile(currenttime, rootPath);
                 LogToFileUtils.write("yidong  pengzhuang shipin over");//写入日志
-                new Handler().postDelayed(new Runnable() {
+                new Handler(getMainLooper()).postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         IsYDSP = false;
@@ -2368,6 +2369,11 @@ public class MainActivity extends AppCompatActivity implements BDLocationListene
             }, 3000);
 
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        LogToFileUtils.write("back jian press");//写入日志
     }
 }
 

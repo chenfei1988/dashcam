@@ -538,14 +538,7 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
             mediaRecorder.stop();
             isRecording = false;
             LogToFileUtils.write("video have saved in rootmulu");
-            if (MainActivity.IsZhualu) {
-                new android.os.Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
-                    }
-                }, 1000);
-            }
+
             //   Toast.makeText(context, "视频已保存在根目录", Toast.LENGTH_SHORT).show();
             if (MainActivity.IsYDSP) {
                 FileUtil.MoveFiletoDangerFile(currentVediopah, rootPath);
@@ -555,6 +548,14 @@ public class CameraSurfaceView extends SurfaceView implements SurfaceHolder.Call
                 if (MyAPP.Debug) {
                     context.sendBroadcast(intent);
                 }
+            }
+            if (MainActivity.IsZhualu) {
+                new android.os.Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        EventBus.getDefault().post(new RefreshEvent(4, currentVediopah, ""));
+                    }
+                }, 1000);
             }
             LogToFileUtils.write("stopRecord Success");
             //  videoDb.addDriveVideo(driveVideo);
